@@ -26,8 +26,7 @@ def diag_indices(n):
 def _to_tensor(g, device='cpu'):
     """ convert g to torch.Tensor """
     if isinstance(g, torch.Tensor):
-        # if g is already a tensor, torch will warn for not using clone()
-        return g.clone().to(dtype=torch_dtype).to(device)
+        return g.to(dtype=torch_dtype, device=device)
     else:
         return torch.tensor(g, dtype=torch_dtype, device=device)
 
@@ -38,12 +37,9 @@ def _order_of_magnitude(v):
 
 
 class SASGreensSystem:
-    # for logging
-    _init_called = 0
-
     def _get_x0(self, xi0, b0):
         """ get initial guess x0 """
-        x0 = torch.zeros(sum(self._s_dims) + 2, dtype=torch_dtype)
+        x0 = torch.empty(sum(self._s_dims) + 2, dtype=torch_dtype)
         pos = 0
         for i, s_dim in enumerate(self._s_dims):
             # using uniform distributions
@@ -68,12 +64,16 @@ class SASGreensSystem:
 
     def _g_dot_s2(self, g, s_list, skips):
         """ perform successive G.s1^2...sk^2...sn^2 """
-        skipped = 0
-        for i, s in enumerate(s_list):
-            if i not in skips:
-                g = torch.tensordot(g, s ** 2, dims=([self._nq + skipped], [0]))
-            else:
-                skipped += 1  # move to next axis
+        # reorder g
+        if len(skips) > 0:
+            source = self._nq + torch.tensor(skips, dtype=int)
+            dest = self._nq + torch.arange(len(skips), dtype=int)
+            g = torch.moveaxis(g, tuple(source.numpy()), tuple(dest.numpy()))
+        # successive dot
+        # from last to first because it is much faster
+        for i, s in enumerate(s_list[::-1]):
+            if len(s_list) - 1 - i not in skips:
+                g = torch.tensordot(g, s ** 2, dims=1)
         return g
 
     def _obj_func(self, x):
@@ -83,7 +83,7 @@ class SASGreensSystem:
         xi_m, b_m = xi * self._xi_mag, b * self._b_mag
 
         # initialize Gs2
-        Gs2 = torch.zeros(self._q_dims, dtype=torch_dtype,
+        Gs2 = torch.empty(self._q_dims, dtype=torch_dtype,
                           device=self._device)
         # compute Gs2 by batch
         for G_id in self._batch_ids:
@@ -97,49 +97,8 @@ class SASGreensSystem:
         L = .5 * torch.tensordot(eps, eps, dims=self._nq)
         return L.item()
 
-    def _jac_func(self, x):
-        """ Jacobian """
-        # extract
-        s_list, xi, b = self._extract(x, device=self._device)
-        xi_m, b_m = xi * self._xi_mag, b * self._b_mag
-
-        # initialize Gs2_i
-        Gs2_i = [torch.zeros(0)] * self._ns
-        for i, s_dim in enumerate(self._s_dims):
-            shape = self._q_dims + [s_dim]
-            Gs2_i[i] = torch.zeros(
-                shape, dtype=torch_dtype, device=self._device)
-        # compute Gs2_i by batch
-        for G_id in self._batch_ids:
-            # batch
-            g = _to_tensor(self._G[G_id], device=self._device)
-            # Gs2_i
-            for i, s_dim in enumerate(self._s_dims):
-                Gs2_i[i][G_id] = self._g_dot_s2(g, s_list, skips=[i])
-
-        # Gs2 based on Gs2_i
-        Gs2 = torch.tensordot(Gs2_i[0], s_list[0] ** 2, dims=1)
-
-        # eps
-        eps = (xi_m * Gs2 + b_m - self._mu) / self._nv
-        deps_dxi = self._xi_mag * Gs2 / self._nv
-        deps_db = self._b_mag / self._nv
-
-        # Jacobian
-        nv_indexed = self._nv[self._q_slices + (None,)]
-        J = torch.zeros(len(x), dtype=torch_dtype, device=self._device)
-        pos = 0
-        for i, s_dim in enumerate(self._s_dims):
-            deps_ds = 2. * xi_m * Gs2_i[i] * s_list[i] / nv_indexed
-            dL_ds = torch.tensordot(eps, deps_ds, dims=self._nq)
-            J[pos:pos + s_dim] = dL_ds
-            pos += s_dim
-        J[-2] = torch.tensordot(eps, deps_dxi, dims=self._nq).item()
-        J[-1] = torch.tensordot(eps, deps_db, dims=self._nq).item()
-        return J.to('cpu').numpy()
-
-    def _hess_func(self, x):
-        """ Hessian """
+    def _form_jac_hess(self, x):
+        """ form Jacobian and Hessian"""
         # extract
         s_list, xi, b = self._extract(x, device=self._device)
         xi_m, b_m = xi * self._xi_mag, b * self._b_mag
@@ -148,23 +107,36 @@ class SASGreensSystem:
         Gs2_ij = []
         for i in range(0, self._ns):
             shape = self._q_dims + [self._s_dims[i], -1]
-            Gs2_ij_i = [torch.zeros(0)] * self._ns
+            Gs2_ij_i = [torch.empty(0)] * self._ns
             for j in range(i + 1, self._ns):
                 shape[-1] = self._s_dims[j]
-                Gs2_ij_i[j] = torch.zeros(
+                Gs2_ij_i[j] = torch.empty(
                     shape, dtype=torch_dtype, device=self._device)
             Gs2_ij.append(Gs2_ij_i)
+
         # compute Gs2_ij by batch
         for G_id in self._batch_ids:
+            # copy s_list
+            s_list_remain = s_list.copy()
             # batch
             g = _to_tensor(self._G[G_id], device=self._device)
-            # Gs2_i
-            for i in range(0, self._ns):
-                for j in range(i + 1, self._ns):
-                    Gs2_ij[i][j][G_id] = self._g_dot_s2(g, s_list, skips=[i, j])
+            # Gs2_ij
+            for i in range(0, self._ns - 1):
+                s_list_remain_j = s_list_remain.copy()
+                g_j = g.clone()
+                for j in range(self._ns - 1, i, -1):
+                    Gs2_ij[i][j][G_id] = self._g_dot_s2(
+                        g_j, s_list_remain_j,
+                        skips=[0, len(s_list_remain_j) - 1])
+                    if j != i + 1:
+                        g_j = torch.tensordot(g_j, s_list_remain_j.pop() ** 2,
+                                              dims=1)
+                if i != self._ns - 2:
+                    g = torch.tensordot(g, s_list_remain.pop(0) ** 2,
+                                        dims=([self._nq], [0]))
 
         # Gs2_i based on Gs2_ij
-        Gs2_i = [torch.zeros(0)] * self._ns
+        Gs2_i = [torch.empty(0)] * self._ns
         # all except last one
         for i in range(0, self._ns - 1):
             Gs2_i[i] = torch.tensordot(Gs2_ij[i][i + 1],
@@ -184,8 +156,20 @@ class SASGreensSystem:
         deps_dxi = self._xi_mag * Gs2 / self._nv
         deps_db = self._b_mag / self._nv
 
-        # Hessian
+        # Jacobian
         nv_indexed = self._nv[self._q_slices + (None,)]
+        J = torch.empty(len(x), dtype=torch_dtype, device=self._device)
+        pos = 0
+        for i, s_dim in enumerate(self._s_dims):
+            deps_ds = 2. * xi_m * Gs2_i[i] * s_list[i] / nv_indexed
+            dL_ds = torch.tensordot(eps, deps_ds, dims=self._nq)
+            J[pos:pos + s_dim] = dL_ds
+            pos += s_dim
+        J[-2] = torch.tensordot(eps, deps_dxi, dims=self._nq).item()
+        J[-1] = torch.tensordot(eps, deps_db, dims=self._nq).item()
+        self._jac_save = J.to('cpu').numpy()
+
+        # Hessian
         q_id = (list(range(self._nq)), list(range(self._nq)))
         H = torch.zeros((len(x), len(x)), dtype=torch_dtype,
                         device=self._device)
@@ -251,12 +235,33 @@ class SASGreensSystem:
         # copy upper to lower
         lower_ids = torch.tril_indices(len(x), len(x), offset=-1)
         H[tuple(lower_ids)] = H.t()[tuple(lower_ids)]  # tuple must be used!
-        return H.to('cpu').numpy()
+        self._hess_save = H.to('cpu').numpy()
+
+        # save X to check
+        self._x_save = x
+
+    def _jac_func(self, x):
+        """ Jacobian """
+        # check call order
+        assert self._jac_turn
+        self._jac_turn = False
+        # form jac and hess
+        self._form_jac_hess(x)
+        return self._jac_save
+
+    def _hess_func(self, x):
+        """ Hessian """
+        # check call order
+        assert not self._jac_turn
+        self._jac_turn = True
+        # check x
+        assert (x == self._x_save).all()
+        return self._hess_save
 
     def _constr_s2(self, x):
         """ constraint s^2-1=0"""
         s_list, _, _ = self._extract(x, device='cpu')
-        err = torch.zeros(self._ns, dtype=torch_dtype)
+        err = torch.empty(self._ns, dtype=torch_dtype)
         for i, s in enumerate(s_list):
             err[i] = torch.dot(s, s) - 1.
         return err.numpy()
@@ -282,18 +287,22 @@ class SASGreensSystem:
 
     def _g_dot_w(self, g, w_list, skips):
         """ perform successive G.w1...wk...wn """
-        skipped = 0
-        for i, w in enumerate(w_list):
-            if i not in skips:
-                g = torch.tensordot(g, w, dims=([self._nq + skipped], [0]))
-            else:
-                skipped += 1  # move to next axis
+        # reorder g
+        if len(skips) > 0:
+            source = self._nq + torch.tensor(skips, dtype=int)
+            dest = self._nq + torch.arange(len(skips), dtype=int)
+            g = torch.moveaxis(g, tuple(source.numpy()), tuple(dest.numpy()))
+        # successive dot
+        # from last to first because it is much faster
+        for i, w in enumerate(w_list[::-1]):
+            if len(w_list) - 1 - i not in skips:
+                g = torch.tensordot(g, w, dims=1)
         return g
 
     def _intensity(self, w_list, xi, b):
         """ compute intensity """
         # initialize Gw
-        Gw = torch.zeros(self._q_dims, dtype=torch_dtype,
+        Gw = torch.empty(self._q_dims, dtype=torch_dtype,
                          device=self._device)
         # compute Gw by batch
         for G_id in self._batch_ids:
@@ -314,23 +323,36 @@ class SASGreensSystem:
         Gw_ij = []
         for i in range(0, self._ns):
             shape = self._q_dims + [self._s_dims[i], -1]
-            Gw_ij_i = [torch.zeros(0)] * self._ns
+            Gw_ij_i = [torch.empty(0)] * self._ns
             for j in range(i + 1, self._ns):
                 shape[-1] = self._s_dims[j]
-                Gw_ij_i[j] = torch.zeros(
+                Gw_ij_i[j] = torch.empty(
                     shape, dtype=torch_dtype, device=self._device)
             Gw_ij.append(Gw_ij_i)
+
         # compute Gw_ij by batch
         for G_id in self._batch_ids:
+            # copy w_list
+            w_list_remain = w_list.copy()
             # batch
             g = _to_tensor(self._G[G_id], device=self._device)
-            # Gw_i
-            for i in range(0, self._ns):
-                for j in range(i + 1, self._ns):
-                    Gw_ij[i][j][G_id] = self._g_dot_w(g, w_list, skips=[i, j])
+            # Gw_ij
+            for i in range(0, self._ns - 1):
+                w_list_remain_j = w_list_remain.copy()
+                g_j = g.clone()
+                for j in range(self._ns - 1, i, -1):
+                    Gw_ij[i][j][G_id] = self._g_dot_w(
+                        g_j, w_list_remain_j,
+                        skips=[0, len(w_list_remain_j) - 1])
+                    if j != i + 1:
+                        g_j = torch.tensordot(g_j, w_list_remain_j.pop(),
+                                              dims=1)
+                if i != self._ns - 2:
+                    g = torch.tensordot(g, w_list_remain.pop(0),
+                                        dims=([self._nq], [0]))
 
         # Gw_i based on Gw_ij
-        Gw_i = [torch.zeros(0)] * self._ns
+        Gw_i = [torch.empty(0)] * self._ns
         # all except last one
         for i in range(0, self._ns - 1):
             Gw_i[i] = torch.tensordot(Gw_ij[i][i + 1],
@@ -360,7 +382,7 @@ class SASGreensSystem:
         # Jacobian
         len_x = sum(self._s_dims) + 2
         nv_indexed = self._nv[self._q_slices + (None,)]
-        J = torch.zeros(len_x, dtype=torch_dtype, device=self._device)
+        J = torch.empty(len_x, dtype=torch_dtype, device=self._device)
         pos = 0
         for i, s_dim in enumerate(self._s_dims):
             deps_dw = xi * Gw_i[i] / nv_indexed
@@ -430,7 +452,7 @@ class SASGreensSystem:
         H[tuple(lower_ids)] = H.t()[tuple(lower_ids)]  # tuple must be used!
 
         # form x
-        x = torch.zeros(len_x, dtype=torch_dtype, device=self._device)
+        x = torch.empty(len_x, dtype=torch_dtype, device=self._device)
         pos = 0
         for i, s_dim in enumerate(self._s_dims):
             x[pos:pos + s_dim] = w_list[i]
@@ -549,10 +571,7 @@ class SASGreensSystem:
         """
         # logger
         self._logger = MultiLevelLogger()
-        self._logger.activate(f'SASGreensSystem__'
-                              f'{SASGreensSystem._init_called}',
-                              file_path=log_file, screen=log_screen)
-        SASGreensSystem._init_called += 1
+        self._logger.activate(file_path=log_file, screen=log_screen)
 
         # initialization
         with self._logger.subproc('Initializing SASGreensSystem object'):
@@ -622,11 +641,20 @@ class SASGreensSystem:
         self._saved_results = []
         self._save_iter = None
 
+        # Jacobian and Hessian
+        # NOTE: scipy calls jac() and hess() alternatively, so we can
+        #       avoid calculating many repeated terms by forming both
+        #       J and H when jac() is called
+        self._jac_save = None
+        self._hess_save = None
+        self._jac_turn = True  # safety check
+        self._x_save = None  # safety check
+
     def compute_intensity(self, w_dict, xi, b):
         """
         Compute intensity
 
-        :param w_dict: dict of parameter weights
+        :param w_dict: `dict` of parameter weights
         :param xi: value of ξ
         :param b: value of b
         :return: intensity as a `torch.Tensor`
@@ -650,20 +678,20 @@ class SASGreensSystem:
         :param maxiter: max number of iterations
         :param verbose: verbose level during inversion
         :param trust_options: other options for
-            scipy.optimize.minimize(method=’trust-constr’),
+            `scipy.optimize.minimize(method='trust-constr')`,
         :param save_iter: save results every `save_iter` iterations
         :param only_test_jac_hess: only test Jacobian and Hessian
         :return: a dict including the following (key, value) pairs:
-            w_dict: dict of inverted weights
+            w_dict: `dict` of inverted weights
             xi: inverted ξ
             b: inverted b
-            sens_w_dict: dict of normalized sensitivity of inverted weights
+            sens_w_dict: `dict` of normalized sensitivity of inverted weights
             sens_xi: normalized sensitivity of inverted ξ
             sens_b: normalized sensitivity of inverted b
             I: fitted intensity
             wct: wall-clock time
-            opt_res: result of scipy.optimize.minimize(method=’trust-constr’)
-            saved_res: a list of dicts, each containing the above
+            opt_res: result of `scipy.optimize.minimize(method='trust-constr')`
+            saved_res: `list` of `dict`'s, each `dict` containing the above
                 (key, value) pairs saved every `save_iter` iterations
         """
 
@@ -747,7 +775,7 @@ class SASGreensSystem:
 
                 with self._logger.subproc(
                         'Running '
-                        'scipy.optimize.minimize(method=’trust-constr’)'):
+                        'scipy.optimize.minimize(method="trust-constr")'):
                     # prepare saved results
                     self._save_iter = save_iter
                     self._saved_results = []

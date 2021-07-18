@@ -11,6 +11,7 @@
 import logging
 import sys
 import time
+import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -46,14 +47,17 @@ class MultiLevelLogger:
         self._timers = []
         self._logger = None
 
-    def activate(self, name, file_path=None, screen=True):
+    def activate(self, name=None, file_path=None, screen=True):
         """
         Activate this logger
 
-        :param name: name of the logger
-        :param file_path: file to save logs
+        :param name: name of the logger (default: None)
+        :param file_path: file to save logs (default: None)
         :param screen: show logs on screen (default: True)
         """
+        # random name
+        if name is None:
+            name = str(uuid.uuid4())
         self._logger = logging.getLogger(name)
         self._logger.setLevel(logging.INFO)
         if file_path is not None:

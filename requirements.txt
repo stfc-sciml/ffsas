@@ -1,4 +1,4 @@
 h5py
 scipy
 numpy
-torch
+torch>=1.8.1

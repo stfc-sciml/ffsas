@@ -10,10 +10,17 @@
 
 import torch
 
-# torch data type
-# todo: ffsas supports float32 but scipy.optimize does not, so we
-#       currently fix dtype to float64
+# data type
 torch_dtype = torch.float64
+torch.set_default_dtype(torch_dtype)
+
+
+def set_torch_dtype(dtype):
+    """ set torch dtype """
+    global torch_dtype
+    torch_dtype = dtype
+    torch.set_default_dtype(torch_dtype)
+
 
 # specify version here; it will picked up by pip
 __version__ = '1.0.0'

@@ -57,10 +57,10 @@ includes four API functions, respectively for
 To install `ffsas`:
 
 ```bash
-pip install https://github.com/kuangdai/ffsas/archive/refs/heads/master.zip
+pip install https://github.com/stfc-sciml/ffsas/archive/refs/heads/master.zip
 ```
 
-Try the Jupyter notebooks in `examples/` to quickly learn the usage or follow the [User Guide](doc/USER-GUIDE.md).
+Follow the [User Guide](doc/USER-GUIDE.md) to learn the usage.
 
 
 ## Credits
