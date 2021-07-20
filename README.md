@@ -57,7 +57,7 @@ includes four API functions, respectively for
 To install `ffsas`:
 
 ```bash
-pip install https://github.com/stfc-sciml/ffsas/archive/refs/heads/master.zip
+pip install https://github.com/stfc-sciml/ffsas/archive/refs/heads/main.zip
 ```
 
 Follow the [User Guide](doc/USER-GUIDE.md) to learn the usage.
