@@ -64,7 +64,7 @@ Follow the [User Guide](doc/USER-GUIDE.md) to learn the usage.
 
 
 ## Credits
-Kuangdai Leng<sup>1</sup>, Steve King <sup>2</sup>, Tim Snow <sup>3</sup>, Sarah Rogers <sup>2</sup>, 
+Kuangdai Leng<sup>1</sup>, Steve King<sup>2</sup>, Tim Snow<sup>3</sup>, Sarah Rogers<sup>2</sup>, 
 Jeyan Thiyagalingam<sup>1</sup>
 
 <sup>1</sup> Scientific Computing Department, STFC, UK
