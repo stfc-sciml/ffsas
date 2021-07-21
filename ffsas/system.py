@@ -698,14 +698,15 @@ class SASGreensSystem:
         with self._logger.subproc('Solving inverse problem NLP-s'):
 
             with self._logger.subproc('Data processing'):
-                with self._logger.subproc('Computing ν, d/ν and μ/ν'):
+                with self._logger.subproc('Computing nu, d/nu and mu/nu'):
                     # ν=μ^nu_mu*σ^nu_sigma
                     self._nv = (mu ** nu_mu) * (sigma ** nu_sigma)
                     # send all to device
                     self._nv = _to_tensor(self._nv, device=self._device)
                     self._mu = _to_tensor(mu, device=self._device)
                     self._sigma = _to_tensor(sigma, device=self._device)
-                    self._logger.message(f'using ν=μ^{nu_mu}*σ^{nu_sigma}')
+                    self._logger.message(
+                        f'using nu=mu^{nu_mu}*sigma^{nu_sigma}')
 
                 with self._logger.subproc('Computing mean intensity for '
                                           'entire parameter space'):
