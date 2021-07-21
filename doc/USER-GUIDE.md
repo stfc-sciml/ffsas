@@ -586,7 +586,8 @@ and ![eq](https://latex.codecogs.com/svg.image?%5Cfn_cm\inline%20%5Cxi) in `ffsa
 
     where the average volume ![eq](https://latex.codecogs.com/svg.image?%5Cfn_cm\inline%20V_%5Cmathrm%7Bave%7D) can be easily computed using the ![eq](https://latex.codecogs.com/svg.image?%5Cfn_cm\inline%20%5Cmathbf%7BV%7D) tensor 
     returned by `SASModel.compute_V()` and the relevant parameter weights. 
-    One can use `SASModel.compute_average_V(par_dict, par_weights)` for this task.
+    One can use `SASModel.compute_average_V(par_dict, w_dict)` for this task,
+    where `par_dict` contains the parameter grids and `w_dict` the parameter weights. 
     The factor ![eq](https://latex.codecogs.com/svg.image?%5Cfn_cm\inline%2010%5E%7B-4%7D) comes from the unit system of 
     [SASView/SASModels](http://www.sasview.org/docs/user/models/sphere.html); 
     without this factor, `ffsas` will still yield the same weights for model parameters 

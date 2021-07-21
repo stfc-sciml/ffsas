@@ -617,7 +617,8 @@ and $\xi$ in `ffsas`?**
 
     where the average volume $V_\mathrm{ave}$ can be easily computed using the $\mathbf{V}$ tensor 
     returned by `SASModel.compute_V()` and the relevant parameter weights. 
-    One can use `SASModel.compute_average_V(par_dict, par_weights)` for this task.
+    One can use `SASModel.compute_average_V(par_dict, w_dict)` for this task,
+    where `par_dict` contains the parameter grids and `w_dict` the parameter weights. 
     The factor $10^{-4}$ comes from the unit system of 
     [SASView/SASModels](http://www.sasview.org/docs/user/models/sphere.html); 
     without this factor, `ffsas` will still yield the same weights for model parameters 

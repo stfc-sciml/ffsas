@@ -200,16 +200,15 @@ class SASModel:
                 return G
 
     @classmethod
-    def compute_average_V(cls, par_dict, par_weights):
+    def compute_average_V(cls, par_dict, w_dict):
         """
         Compute average volume
 
         :param par_dict: `dict` of model parameters as `torch.Tensor`s
-        :param par_weights: `dict` of parameter weights as `torch.Tensor`s
+        :param w_dict: `dict` of parameter weights as `torch.Tensor`s
         :return: average volume
         """
         V = cls.compute_V(par_dict)
         for i, key in enumerate(cls.get_par_keys_V()[::-1]):
-            w = par_weights[key]
-            V = torch.tensordot(V, w, dims=1)
+            V = torch.tensordot(V, w_dict[key], dims=1)
         return V.item()
