@@ -62,8 +62,11 @@ class MultiLevelLogger:
         self._logger.setLevel(logging.INFO)
         if file_path is not None:
             self._logger.addHandler(
-                logging.FileHandler(Path(file_path).expanduser(), 'w'))
+                logging.FileHandler(Path(file_path).expanduser(), mode='w',
+                                    encoding='utf8'))
         if screen:
+            sys.stdout = open(sys.stdout.fileno(), mode='w',
+                              encoding='utf8', buffering=1)
             self._logger.addHandler(logging.StreamHandler(sys.stdout))
 
     @property
