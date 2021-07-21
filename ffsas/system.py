@@ -717,7 +717,7 @@ class SASGreensSystem:
                         I_ave[G_id] += sum_g / self._nv[G_id]
                     I_ave /= torch.prod(torch.tensor(self._s_dims))
 
-                with self._logger.subproc('Determining ξ0 and b0'):
+                with self._logger.subproc('Determining xi0 and b0'):
                     # min L, L = (xi I + b d - mu) ^ 2
                     mu_over_nv = self._mu / self._nv
                     d_over_nv = 1 / self._nv
@@ -729,7 +729,7 @@ class SASGreensSystem:
                     A = a11 * a22 - a12 * a12
                     xi0 = (b1 * a22 - b2 * a12) / A
                     b0 = (b2 * a11 - b1 * a12) / A
-                    self._logger.message(f'ξ0 = {xi0.item()}')
+                    self._logger.message(f'xi0 = {xi0.item()}')
                     self._logger.message(f'b0 = {b0.item()}')
 
                 with self._logger.subproc('Auto scaling'):
@@ -742,10 +742,10 @@ class SASGreensSystem:
                         b0 /= self._b_mag
                         # log
                         self._logger.message(
-                            f'scaling factor of ξ = {self._xi_mag}')
+                            f'scaling factor of xi = {self._xi_mag}')
                         self._logger.message(
                             f'scaling factor of b = {self._b_mag}')
-                        self._logger.message(f'scaled ξ0 = {xi0.item()}')
+                        self._logger.message(f'scaled xi0 = {xi0.item()}')
                         self._logger.message(f'scaled b0 = {b0.item()}')
                     else:
                         self._b_mag = 1.
