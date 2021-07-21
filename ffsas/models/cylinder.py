@@ -27,7 +27,7 @@ class Cylinder(SASModel):
 
         # compute volume
         if V is None:
-            V = cls.compute_V(par_dict, const_dict)
+            V = cls.compute_V(par_dict)
 
         #############
         # Compute G #
@@ -68,7 +68,7 @@ class Cylinder(SASModel):
         return ['l', 'r', 'theta', 'phi']
 
     @classmethod
-    def compute_V(cls, par_dict, const_dict):
+    def compute_V(cls, par_dict):
         l, r = par_dict['l'], par_dict['r']
         return math.pi * l[:, None] * r[None, :] ** 2
 

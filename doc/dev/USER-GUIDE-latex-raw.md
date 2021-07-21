@@ -355,7 +355,7 @@ class Cylinder(SASModel):
 
         # compute volume
         if V is None:
-            V = cls.compute_V(par_dict, const_dict)
+            V = cls.compute_V(par_dict)
 
         #############
         # Compute G #
@@ -395,7 +395,7 @@ class Cylinder(SASModel):
         return ['l', 'r', 'theta', 'phi']
 
     @classmethod
-    def compute_V(cls, par_dict, const_dict):
+    def compute_V(cls, par_dict):
         l, r = par_dict['l'], par_dict['r']
         return math.pi * l[:, None] * r[None, :] ** 2
 
@@ -617,6 +617,7 @@ and $\xi$ in `ffsas`?**
 
     where the average volume $V_\mathrm{ave}$ can be easily computed using the $\mathbf{V}$ tensor 
     returned by `SASModel.compute_V()` and the relevant parameter weights. 
+    One can use `SASModel.compute_average_V(par_dict, par_weights)` for this task.
     The factor $10^{-4}$ comes from the unit system of 
     [SASView/SASModels](http://www.sasview.org/docs/user/models/sphere.html); 
     without this factor, `ffsas` will still yield the same weights for model parameters 

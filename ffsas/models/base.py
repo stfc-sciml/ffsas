@@ -45,12 +45,11 @@ class SASModel:
 
     @classmethod
     @abstractmethod
-    def compute_V(cls, par_dict, const_dict):
+    def compute_V(cls, par_dict):
         """
         Compute the volume `V`
 
         :param par_dict: `dict` of model parameters as `torch.Tensor`s
-        :param const_dict: `dict` of model constants
         :return: `V` as a `torch.Tensor`
         """
         pass
@@ -105,7 +104,7 @@ class SASModel:
                 logger.message(f'torch dtype = {torch_dtype}')
 
             with logger.subproc("Computing volume V"):
-                V = cls.compute_V(par_dict, const_dict)
+                V = cls.compute_V(par_dict)
 
             with logger.subproc("Handling fixed parameters"):
                 if fixed_par_weights is None:
@@ -199,3 +198,18 @@ class SASModel:
                 return G_file
             else:
                 return G
+
+    @classmethod
+    def compute_average_V(cls, par_dict, par_weights):
+        """
+        Compute average volume
+
+        :param par_dict: `dict` of model parameters as `torch.Tensor`s
+        :param par_weights: `dict` of parameter weights as `torch.Tensor`s
+        :return: average volume
+        """
+        V = cls.compute_V(par_dict)
+        for i, key in enumerate(cls.get_par_keys_V()[::-1]):
+            w = par_weights[key]
+            V = torch.tensordot(V, w, dims=1)
+        return V.item()

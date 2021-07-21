@@ -25,7 +25,7 @@ class Sphere(SASModel):
 
         # compute volume
         if V is None:
-            V = cls.compute_V(par_dict, const_dict)
+            V = cls.compute_V(par_dict)
 
         #############
         # Compute G #
@@ -49,7 +49,7 @@ class Sphere(SASModel):
         return ['r']
 
     @classmethod
-    def compute_V(cls, par_dict, const_dict):
+    def compute_V(cls, par_dict):
         r = par_dict['r']
         return 4. / 3. * math.pi * r ** 3
 

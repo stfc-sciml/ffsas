@@ -26,7 +26,7 @@ class Ellipsoid(SASModel):
 
         # compute volume
         if V is None:
-            V = cls.compute_V(par_dict, const_dict)
+            V = cls.compute_V(par_dict)
 
         #############
         # Compute G #
@@ -65,7 +65,7 @@ class Ellipsoid(SASModel):
         return ['rp', 're', 'theta', 'phi']
 
     @classmethod
-    def compute_V(cls, par_dict, const_dict):
+    def compute_V(cls, par_dict):
         rp, re = par_dict['rp'], par_dict['re']
         return 4. / 3. * math.pi * rp[:, None] * re[None, :] ** 2
 
