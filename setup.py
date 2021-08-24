@@ -15,7 +15,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=requirements,
-    license='MIT License',
+    license='BSD-3-Clause License',
     author='Kuangdai Leng, Steve King, Tim Snow, Sarah Rogers, '
            'Jeyan Thiyagalingam',
     author_email='kuangdai.leng@stfc.ac.uk',
