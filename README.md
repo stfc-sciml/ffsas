@@ -74,4 +74,4 @@ Jeyan Thiyagalingam<sup>1</sup>
 <sup>3</sup> Diamond Light Source, STFC, UK
 
 ## Funding and Support 
-This work was supported by the Science and Technology Facilities Council ISIS Neutron and Muon Source (ISIS) through the ISIS-ML funding, and by Wave I of the UKRI Strategic Priorities Fund under the EPSRC grant (EP/T001569/1), particularly the AI for Science theme in that grant and the Alan Turing Institute. We gratefully acknowledge their support.
+This work was supported by the ISIS Neutron and Muon Source (ISIS) of the Science and Technology Facilities Council through the ISIS-ML funding, and by Wave I of the UKRI Strategic Priorities Fund under the EPSRC grant (EP/T001569/1), particularly the AI for Science theme in that grant and the Alan Turing Institute. We gratefully acknowledge their support.
