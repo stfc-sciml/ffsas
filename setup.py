@@ -1,3 +1,5 @@
+from os import path
+
 from setuptools import setup, find_packages
 
 # find version
@@ -7,6 +9,11 @@ with open('ffsas/__init__.py') as f:
 # framework dependencies
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
+
+# read contents from README.md
+this_directory = path.abspath(path.dirname(__file__))
+with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
 
 # setup
 setup(
@@ -19,5 +26,7 @@ setup(
     author='Kuangdai Leng, Steve King, Tim Snow, Sarah Rogers, '
            'Jeyan Thiyagalingam',
     author_email='kuangdai.leng@stfc.ac.uk',
-    description='Free-form inversion for small-angle scattering'
+    description='Free-form inversion for small-angle scattering',
+    long_description=long_description,
+    long_description_content_type='text/markdown'
 )
