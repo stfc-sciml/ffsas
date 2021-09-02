@@ -1,3 +1,6 @@
 include README.md
 include LICENSE
 include requirements.txt
+include doc/USER-GUIDE.md
+include examples/PS3_data/*
+include examples/*.ipynb
