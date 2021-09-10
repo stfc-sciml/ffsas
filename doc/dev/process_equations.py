@@ -19,7 +19,7 @@ txt = ''
 for i, eq in enumerate(split_inline):
     if i % 2 == 1:
         eq = quote(eq.replace('ø', ' '), safe='')
-        txt += f'![eq](https://latex.codecogs.com/svg.image?%5Cfn_cm\inline%20{eq})'
+        txt += f'![eq](https://latex.codecogs.com/svg.image?\inline%20{eq})'
     else:
         txt += eq
 
@@ -32,7 +32,7 @@ for i, eq in enumerate(split_inline):
         eq = eq.replace('ñ', '\n')
         eq = quote(eq)
         txt += '<p align="center">'
-        txt += f'<img src="https://latex.codecogs.com/svg.image?%5Cfn_cm{eq}">'
+        txt += f'<img src="https://latex.codecogs.com/svg.image?{eq}">'
         txt += '</p>'
     else:
         txt += eq
