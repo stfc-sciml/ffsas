@@ -155,8 +155,9 @@ class MultiLevelLogger:
         self.begin(proc_name)
         try:
             yield self
-        finally:
             self.ended(proc_name)
+        finally:
+            pass
 
     def get_writer(self):
         """
