@@ -52,8 +52,8 @@ class SASGreensSystem:
                 w_init = w_dict_init[self._par_keys[i]]
                 x0[pos:pos + s_dim] = torch.sqrt(w_init / w_init.sum())
             pos += s_dim
-        x0[-2] = xi0 if xi_init is None else xi_init
-        x0[-1] = b0 if b_init is None else b_init
+        x0[-2] = xi0 if xi_init is None else xi_init / self._xi_mag
+        x0[-1] = b0 if b_init is None else b_init / self._b_mag
         return x0.numpy()
 
     def _extract(self, x, device):
@@ -799,10 +799,8 @@ class SASGreensSystem:
                     try:
                         opt_res = optimize.minimize(
                             self._obj_func,
-                            self._get_x0(xi0, b0,
-                                         w_dict_init=w_dict_init,
-                                         xi_init=xi_init / self._xi_mag,
-                                         b_init=b_init / self._b_mag),
+                            self._get_x0(xi0, b0, w_dict_init=w_dict_init,
+                                         xi_init=xi_init, b_init=b_init),
                             method='trust-constr',
                             jac=self._jac_func,
                             hess=self._hess_func,
