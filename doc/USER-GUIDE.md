@@ -480,6 +480,7 @@ of an intensity observation:
 ```python
 # solve inverse problem given mu and sigma
 inverse_result = g_sys.solve_inverse(mu, sigma, nu_mu=.0, nu_sigma=1.,
+                                     w_dict_init=None, xi_init=None, b_init=None,
                                      auto_scaling=True, maxiter=1000, verbose=1,
                                      trust_options=None, save_iter=None)
 ```
@@ -507,6 +508,9 @@ the inversion can be too dominated by the brightest parts in the intensity image
     ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cnu_%5Cmu%3D%5Cnu_%5Csigma%3D0.5).
     
 > 📗 NOTE: we do not require ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cnu_%5Cmu%2B%5Cnu_%5Csigma%3D1), but theoretically this is required to make ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cepsilon_%7Bij%7D) and ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cchi%5E2) dimensionless.
+
+* `w_dict_init`, `xi_init` and `b_init`: the initial guesses of the variables. Users normally
+do not need to provide them.
 
 * `auto_scaling`: users should always use `auto_scaling=True` for accuracy preservation. 
 How it works is explained in the question about "unit system" in [3 FAQ](#3-FAQ).

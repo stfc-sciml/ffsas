@@ -37,17 +37,23 @@ def _order_of_magnitude(v):
 
 
 class SASGreensSystem:
-    def _get_x0(self, xi0, b0):
+    def _get_x0(self, xi0, b0, w_dict_init=None, xi_init=None, b_init=None):
         """ get initial guess x0 """
+        if w_dict_init is None:
+            w_dict_init = {}
         x0 = torch.empty(sum(self._s_dims) + 2, dtype=torch_dtype)
         pos = 0
         for i, s_dim in enumerate(self._s_dims):
-            # using uniform distributions
-            x0[pos:pos + s_dim] = torch.sqrt(
-                torch.ones(s_dim, dtype=torch_dtype) / s_dim)
+            if self._par_keys[i] not in w_dict_init.keys():
+                # using uniform distributions
+                x0[pos:pos + s_dim] = torch.sqrt(
+                    torch.ones(s_dim, dtype=torch_dtype) / s_dim)
+            else:
+                w_init = w_dict_init[self._par_keys[i]]
+                x0[pos:pos + s_dim] = torch.sqrt(w_init / w_init.sum())
             pos += s_dim
-        x0[-2] = xi0
-        x0[-1] = b0
+        x0[-2] = xi0 if xi_init is None else xi_init
+        x0[-1] = b0 if b_init is None else b_init
         return x0.numpy()
 
     def _extract(self, x, device):
@@ -663,6 +669,7 @@ class SASGreensSystem:
         return self._intensity(w_list, xi, b).to('cpu')
 
     def solve_inverse(self, mu, sigma, nu_mu=.0, nu_sigma=1.,
+                      w_dict_init=None, xi_init=None, b_init=None,
                       auto_scaling=True, maxiter=1000, verbose=1,
                       trust_options=None, save_iter=None,
                       only_test_jac_hess=False):
@@ -673,6 +680,9 @@ class SASGreensSystem:
         :param sigma: stddev (σ) of observed intensity
         :param nu_mu: power of μ in χ2 normalisation (default=0)
         :param nu_sigma: power of σ in χ2 normalisation (default=1)
+        :param w_dict_init: initial guess of weights (default=None)
+        :param xi_init: initial guess of ξ (default=None)
+        :param b_init: initial guess of b (default=None)
         :param auto_scaling: automatically scale data to proper magnitude
             to improve accuracy (default=True)
         :param maxiter: max number of iterations
@@ -789,7 +799,10 @@ class SASGreensSystem:
                     try:
                         opt_res = optimize.minimize(
                             self._obj_func,
-                            self._get_x0(xi0, b0),
+                            self._get_x0(xi0, b0,
+                                         w_dict_init=w_dict_init,
+                                         xi_init=xi_init / self._xi_mag,
+                                         b_init=b_init / self._b_mag),
                             method='trust-constr',
                             jac=self._jac_func,
                             hess=self._hess_func,
