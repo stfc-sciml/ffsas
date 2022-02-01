@@ -11,3 +11,4 @@
 from ffsas.models.base import SASModel
 from ffsas.models.ellipsoid import Ellipsoid
 from ffsas.models.sphere import Sphere
+from ffsas.models.cylinder import Cylinder
