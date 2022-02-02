@@ -37,7 +37,7 @@ def _order_of_magnitude(v):
 
 
 class SASGreensSystem:
-    def _get_x0(self, xi0, b0, w_dict_init=None, xi_init=None, b_init=None):
+    def _get_x0(self, xi0, b0, w_dict_init=None):
         """ get initial guess x0 """
         if w_dict_init is None:
             w_dict_init = {}
@@ -52,8 +52,8 @@ class SASGreensSystem:
                 w_init = w_dict_init[self._par_keys[i]]
                 x0[pos:pos + s_dim] = torch.sqrt(w_init / w_init.sum())
             pos += s_dim
-        x0[-2] = xi0 if xi_init is None else xi_init / self._xi_mag
-        x0[-1] = b0 if b_init is None else b_init / self._b_mag
+        x0[-2] = xi0
+        x0[-1] = b0
         return x0.numpy()
 
     def _extract(self, x, device):
@@ -718,30 +718,51 @@ class SASGreensSystem:
                     self._logger.message(
                         f'using nu=mu^{nu_mu}*sigma^{nu_sigma}')
 
-                with self._logger.subproc('Computing mean intensity for '
-                                          'entire parameter space'):
-                    I_ave = torch.zeros_like(self._mu)
-                    for G_id in self._batch_ids:
-                        g = _to_tensor(self._G[G_id], device=self._device)
-                        sum_g = torch.sum(g, dim=list(
-                            range(self._nq, self._nq + self._ns)))
-                        I_ave[G_id] += sum_g / self._nv[G_id]
-                    I_ave /= torch.prod(torch.tensor(self._s_dims))
-
                 with self._logger.subproc('Determining xi0 and b0'):
-                    # min L, L = (xi I + b d - mu) ^ 2
-                    mu_over_nv = self._mu / self._nv
-                    d_over_nv = 1 / self._nv
-                    a11 = (I_ave ** 2).sum()
-                    a12 = (I_ave * d_over_nv).sum()
-                    a22 = (d_over_nv ** 2).sum()
-                    b1 = (mu_over_nv * I_ave).sum()
-                    b2 = (mu_over_nv * d_over_nv).sum()
-                    A = a11 * a22 - a12 * a12
-                    xi0 = (b1 * a22 - b2 * a12) / A
-                    b0 = (b2 * a11 - b1 * a12) / A
-                    self._logger.message(f'xi0 = {xi0.item()}')
-                    self._logger.message(f'b0 = {b0.item()}')
+                    if xi_init is None or b_init is None:
+                        with self._logger.subproc('Computing mean intensity '
+                                                  'over entire G'):
+                            I_ave = torch.zeros_like(self._mu)
+                            for G_id in self._batch_ids:
+                                g = _to_tensor(self._G[G_id],
+                                               device=self._device)
+                                sum_g = torch.sum(g, dim=list(
+                                    range(self._nq, self._nq + self._ns)))
+                                I_ave[G_id] += sum_g / self._nv[G_id]
+                            I_ave /= torch.prod(torch.tensor(self._s_dims))
+
+                        with self._logger.subproc('Solving xi0 and b0'):
+                            # min L, L = (xi I + b d - mu) ^ 2
+                            mu_over_nv = self._mu / self._nv
+                            d_over_nv = 1 / self._nv
+                            a11 = (I_ave ** 2).sum()
+                            a12 = (I_ave * d_over_nv).sum()
+                            a22 = (d_over_nv ** 2).sum()
+                            b1 = (mu_over_nv * I_ave).sum()
+                            b2 = (mu_over_nv * d_over_nv).sum()
+                            A = a11 * a22 - a12 * a12
+                            xi0_auto = (b1 * a22 - b2 * a12) / A
+                            b0_auto = (b2 * a11 - b1 * a12) / A
+                    else:
+                        xi0_auto = None
+                        b0_auto = None
+
+                    if xi_init is None:
+                        xi0 = xi0_auto
+                        self._logger.message(f'xi0 = {xi0_auto.item()}, '
+                                             f'determined by G')
+                    else:
+                        xi0 = torch.tensor(xi_init, device=self._device)
+                        self._logger.message(f'xi0 = {xi0.item()}, '
+                                             f'specified by xi_init')
+                    if b_init is None:
+                        b0 = b0_auto
+                        self._logger.message(f'b0 = {b0_auto.item()}, '
+                                             f'determined by G')
+                    else:
+                        b0 = torch.tensor(b_init, device=self._device)
+                        self._logger.message(f'b0 = {b0.item()}, '
+                                             f'specified by b_init')
 
                 with self._logger.subproc('Auto scaling'):
                     if auto_scaling:
@@ -799,8 +820,7 @@ class SASGreensSystem:
                     try:
                         opt_res = optimize.minimize(
                             self._obj_func,
-                            self._get_x0(xi0, b0, w_dict_init=w_dict_init,
-                                         xi_init=xi_init, b_init=b_init),
+                            self._get_x0(xi0, b0, w_dict_init=w_dict_init),
                             method='trust-constr',
                             jac=self._jac_func,
                             hess=self._hess_func,
