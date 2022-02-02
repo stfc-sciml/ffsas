@@ -749,20 +749,20 @@ class SASGreensSystem:
 
                     if xi_init is None:
                         xi0 = xi0_auto
-                        self._logger.message(f'xi0 = {xi0_auto.item()}, '
-                                             f'determined by G')
+                        self._logger.message(f'xi0 = {xi0.item()} '
+                                             f'(determined by G)')
                     else:
                         xi0 = torch.tensor(xi_init, device=self._device)
-                        self._logger.message(f'xi0 = {xi0.item()}, '
-                                             f'specified by xi_init')
+                        self._logger.message(f'xi0 = {xi0.item()} '
+                                             f'(specified by xi_init)')
                     if b_init is None:
                         b0 = b0_auto
-                        self._logger.message(f'b0 = {b0_auto.item()}, '
-                                             f'determined by G')
+                        self._logger.message(f'b0 = {b0.item()} '
+                                             f'(determined by G)')
                     else:
                         b0 = torch.tensor(b_init, device=self._device)
-                        self._logger.message(f'b0 = {b0.item()}, '
-                                             f'specified by b_init')
+                        self._logger.message(f'b0 = {b0.item()} '
+                                             f'(specified by b_init)')
 
                 with self._logger.subproc('Auto scaling'):
                     if auto_scaling:
