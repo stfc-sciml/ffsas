@@ -676,8 +676,8 @@ class SASGreensSystem:
                       w_dict_init=None, xi_init=None, b_init=None,
                       auto_scaling=True, maxiter=1000, verbose=1,
                       trust_options=None, save_iter=None,
-                      only_test_jac_hess=False,
-                      return_intensity_sensitivity=True):
+                      return_intensity_sensitivity=True,
+                      only_test_jac_hess=False):
         """
         Solve the inverse problem with observed intensity
 
@@ -696,10 +696,10 @@ class SASGreensSystem:
             `scipy.optimize.minimize(method='trust-constr')` (default=None)
         :param save_iter: save results every `save_iter` iterations
             (default=None)
-        :param only_test_jac_hess: only test Jacobian and Hessian
-            (default=False)
         :param return_intensity_sensitivity: return intensity and sensitivity
             predicted by the inverted weights, ξ and b (default=True)
+        :param only_test_jac_hess: only test Jacobian and Hessian
+            (default=False)
         :return: a dict including the following (key, value) pairs:
             w_dict: `dict` of inverted weights
             xi: inverted ξ
