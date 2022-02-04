@@ -91,7 +91,7 @@ class SASGreensSystem:
 
     def _g_dot_s2(self, g, s_list, skips):
         """ perform successive G.s1^2...sk^2...sn^2 """
-        w_list = [s ** 2 if i in skips else None for i, s in enumerate(s_list)]
+        w_list = [None if i in skips else s ** 2 for i, s in enumerate(s_list)]
         return self._g_dot_w(g, w_list, skips)
 
     def _obj_func(self, x):
