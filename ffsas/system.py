@@ -87,7 +87,8 @@ class SASGreensSystem:
 
         # contraction
         gid = [i + self._nq for i in non_skips]
-        return torch.tensordot(g, w_outer, dims=(gid, range(len(non_skips))))
+        wid = list(range(len(non_skips)))
+        return torch.tensordot(g, w_outer, dims=(gid, wid))
 
     def _g_dot_s2(self, g, s_list, skips):
         """ perform successive G.s1^2...sk^2...sn^2 """
