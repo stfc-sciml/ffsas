@@ -70,11 +70,10 @@ class SASGreensSystem:
 
     def _g_dot_w(self, g, w_list, skips):
         """ perform successive G.w1...wk...wn """
-        # non-skip
-        non_skips = []
-        for i in range(len(w_list)):
-            if i not in skips:
-                non_skips.append(i)
+        # non-skip indices
+        non_skips = list(range(len(w_list)))
+        for i in skips:
+            non_skips.remove(i)
 
         # all skipped
         if len(non_skips) == 0:
@@ -92,7 +91,8 @@ class SASGreensSystem:
 
     def _g_dot_s2(self, g, s_list, skips):
         """ perform successive G.s1^2...sk^2...sn^2 """
-        return self._g_dot_w(g, [s ** 2 for s in s_list], skips)
+        w_list = [s ** 2 if i in skips else None for i, s in enumerate(s_list)]
+        return self._g_dot_w(g, w_list, skips)
 
     def _obj_func(self, x):
         """ objective """
