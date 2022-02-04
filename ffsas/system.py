@@ -68,19 +68,30 @@ class SASGreensSystem:
         b = x[-1]
         return s_list, xi, b
 
+    def _g_dot_w(self, g, w_list, skips):
+        """ perform successive G.w1...wk...wn """
+        # non-skip
+        non_skips = []
+        for i in range(len(w_list)):
+            if i not in skips:
+                non_skips.append(i)
+
+        # all skipped
+        if len(non_skips) == 0:
+            return g
+
+        # outer product of w
+        w_outer = w_list[non_skips[0]]
+        for i in non_skips[1:]:
+            w_outer = torch.einsum('...i,j->...ij', w_outer, w_list[i])
+
+        # contraction
+        gid = [i + self._nq for i in non_skips]
+        return torch.tensordot(g, w_outer, dims=(gid, range(len(non_skips))))
+
     def _g_dot_s2(self, g, s_list, skips):
         """ perform successive G.s1^2...sk^2...sn^2 """
-        # reorder g
-        if len(skips) > 0:
-            source = self._nq + torch.tensor(skips, dtype=int)
-            dest = self._nq + torch.arange(len(skips), dtype=int)
-            g = torch.moveaxis(g, tuple(source.numpy()), tuple(dest.numpy()))
-        # successive dot
-        # from last to first because it is much faster
-        for i, s in enumerate(s_list[::-1]):
-            if len(s_list) - 1 - i not in skips:
-                g = torch.tensordot(g, s ** 2, dims=1)
-        return g
+        return self._g_dot_w(g, [s ** 2 for s in s_list], skips)
 
     def _obj_func(self, x):
         """ objective """
@@ -291,20 +302,6 @@ class SASGreensSystem:
             pos += s_dim
         return H.numpy()
 
-    def _g_dot_w(self, g, w_list, skips):
-        """ perform successive G.w1...wk...wn """
-        # reorder g
-        if len(skips) > 0:
-            source = self._nq + torch.tensor(skips, dtype=int)
-            dest = self._nq + torch.arange(len(skips), dtype=int)
-            g = torch.moveaxis(g, tuple(source.numpy()), tuple(dest.numpy()))
-        # successive dot
-        # from last to first because it is much faster
-        for i, w in enumerate(w_list[::-1]):
-            if len(w_list) - 1 - i not in skips:
-                g = torch.tensordot(g, w, dims=1)
-        return g
-
     def _intensity(self, w_list, xi, b):
         """ compute intensity """
         # initialize Gw
@@ -480,31 +477,34 @@ class SASGreensSystem:
 
         # w list
         w_list = [s ** 2 for s in s_list]
+        w_dict = {self._par_keys[i]: w.to('cpu')
+                  for i, w in enumerate(w_list)}
 
         # unscaled or physical (xi, b)
         unscaled_xi = xi * self._xi_mag
         unscaled_b = b * self._b_mag
 
-        # compute intensity and sensitivity
-        its, sens_w_list, sens_xi, sens_b = \
-            self._intensity_sensitivity(w_list, unscaled_xi, unscaled_b)
-
-        # its = self._intensity(w_list, unscaled_xi, unscaled_b)
-
-        # return result in a big dict
-        w_dict = {self._par_keys[i]: w.to('cpu')
-                  for i, w in enumerate(w_list)}
-        sens_w_dict = {self._par_keys[i]: sens_w.to('cpu')
-                       for i, sens_w in enumerate(sens_w_list)}
-        return {'w_dict': w_dict,
-                'xi': unscaled_xi,
-                'b': unscaled_b,
-                'sens_w_dict': sens_w_dict,
-                'sens_xi': sens_xi.item(),
-                'sens_b': sens_b.item(),
-                'I': its.to('cpu'),
-                'wct': opt_res['execution_time'],
-                'opt_res': opt_res}
+        if self._return_intensity_sensitivity:
+            # compute intensity and sensitivity
+            its, sens_w_list, sens_xi, sens_b = \
+                self._intensity_sensitivity(w_list, unscaled_xi, unscaled_b)
+            sens_w_dict = {self._par_keys[i]: sens_w.to('cpu')
+                           for i, sens_w in enumerate(sens_w_list)}
+            return {'w_dict': w_dict,
+                    'xi': unscaled_xi,
+                    'b': unscaled_b,
+                    'sens_w_dict': sens_w_dict,
+                    'sens_xi': sens_xi.item(),
+                    'sens_b': sens_b.item(),
+                    'I': its.to('cpu'),
+                    'wct': opt_res['execution_time'],
+                    'opt_res': opt_res}
+        else:
+            return {'w_dict': w_dict,
+                    'xi': unscaled_xi,
+                    'b': unscaled_b,
+                    'wct': opt_res['execution_time'],
+                    'opt_res': opt_res}
 
     def _call_back_save(self, _, opt_res):
         """ callback to save results """
@@ -656,6 +656,9 @@ class SASGreensSystem:
         self._jac_turn = True  # safety check
         self._x_save = None  # safety check
 
+        # other options
+        self._return_intensity_sensitivity = True
+
     def compute_intensity(self, w_dict, xi, b):
         """
         Compute intensity
@@ -672,7 +675,8 @@ class SASGreensSystem:
                       w_dict_init=None, xi_init=None, b_init=None,
                       auto_scaling=True, maxiter=1000, verbose=1,
                       trust_options=None, save_iter=None,
-                      only_test_jac_hess=False):
+                      only_test_jac_hess=False,
+                      return_intensity_sensitivity=True):
         """
         Solve the inverse problem with observed intensity
 
@@ -685,12 +689,16 @@ class SASGreensSystem:
         :param b_init: initial guess of b (default=None)
         :param auto_scaling: automatically scale data to proper magnitude
             to improve accuracy (default=True)
-        :param maxiter: max number of iterations
-        :param verbose: verbose level during inversion
+        :param maxiter: max number of iterations (default=1000)
+        :param verbose: verbose level during inversion (default=1)
         :param trust_options: other options for
-            `scipy.optimize.minimize(method='trust-constr')`,
+            `scipy.optimize.minimize(method='trust-constr')` (default=None)
         :param save_iter: save results every `save_iter` iterations
+            (default=None)
         :param only_test_jac_hess: only test Jacobian and Hessian
+            (default=False)
+        :param return_intensity_sensitivity: return intensity and sensitivity
+            predicted by the inverted weights, ξ and b (default=True)
         :return: a dict including the following (key, value) pairs:
             w_dict: `dict` of inverted weights
             xi: inverted ξ
@@ -791,6 +799,9 @@ class SASGreensSystem:
             if only_test_jac_hess:
                 self._test_jac_hess(xi0 * 2, b0 / 2)
                 return
+
+            # other options
+            self._return_intensity_sensitivity = return_intensity_sensitivity
 
             with self._logger.subproc('Solving NLP-s by trust-region'):
                 with self._logger.subproc('Trust-region options'):
