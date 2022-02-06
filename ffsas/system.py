@@ -660,27 +660,17 @@ class SASGreensSystem:
         # other options
         self._return_intensity_sensitivity = True
 
-    def compute_intensity(self, w_dict, xi, b, return_sensitivity=False):
+    def compute_intensity(self, w_dict, xi, b):
         """
         Compute intensity
 
         :param w_dict: `dict` of parameter weights
         :param xi: value of ξ
         :param b: value of b
-        :param return_sensitivity: whether to compute and return sensitivity
-            (default=False)
-        :return: intensity as a `torch.Tensor` and
-            sensitivity (if return_sensitivity=True) for weights, xi and b
+        :return: intensity as a `torch.Tensor`
         """
         w_list = [w_dict[key].to(self._device) for key in self._par_keys]
-        if not return_sensitivity:
-            return self._intensity(w_list, xi, b).to('cpu')
-        else:
-            its, sens_w_list, sens_xi, sens_b = \
-                self._intensity_sensitivity(w_list, xi, b)
-            sens_w_dict = {self._par_keys[i]: sens_w.to('cpu')
-                           for i, sens_w in enumerate(sens_w_list)}
-            return its.to('cpu'), sens_w_dict, sens_xi.item(), sens_b.item()
+        return self._intensity(w_list, xi, b).to('cpu')
 
     def solve_inverse(self, mu, sigma, nu_mu=.0, nu_sigma=1.,
                       w_dict_init=None, xi_init=None, b_init=None,
