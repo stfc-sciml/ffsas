@@ -1,3 +1,3 @@
-include LICENSE
-include README.md
+prune *
+recursive-include ffsas *.py
 include doc/USER-GUIDE.md
