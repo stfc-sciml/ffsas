@@ -305,6 +305,7 @@ class SASGreensSystem:
 
     def _intensity(self, w_list, xi, b):
         """ compute intensity """
+        # Note: xi and b must be unscaled.
         # initialize Gw
         Gw = torch.empty(self._q_dims, dtype=torch_dtype,
                          device=self._device)
@@ -318,8 +319,9 @@ class SASGreensSystem:
         # intensity
         return xi * Gw + b
 
-    def _intensity_sensitivity(self, w_list, xi, b):
-        """ compute intensity and sensitivity """
+    def _intensity_sensitivity_uncertainty(self, w_list, xi, b):
+        """ compute intensity, sensitivity and uncertainty """
+        # Note: xi and b must be unscaled.
         ############
         # Gw terms #
         ############
@@ -469,7 +471,39 @@ class SASGreensSystem:
         ###############
         sens = torch.tensordot(H, x / J, dims=1)
         sens_w_list, sens_xi, sens_b = self._extract(sens, device=self._device)
-        return its, sens_w_list, sens_xi, sens_b
+
+        ###############
+        # uncertainty #
+        ###############
+        # http://www.ipgp.fr/~tarantola/Files/Professional/Books/InverseProblemTheory.pdf
+        # Eq 3.56 for posterior uncertainty near ML estimator
+
+        # cov of data
+        Cd_inv = torch.diag(self._nv.reshape(-1) ** (-2))
+
+        def compute_std(Gn):
+            GCG = torch.tensordot(
+                torch.tensordot(Gn.t(), Cd_inv, dims=1), Gn, dims=1)
+            if len(GCG.shape) == 0:
+                GCG_inv_diag = 1. / GCG
+            else:
+                # sparse approximate inverse
+                GCG_inv_diag = torch.diag(GCG) / (GCG * GCG).sum(dim=0)
+            return torch.sqrt(GCG_inv_diag)
+
+        # std of w
+        std_w_list = []
+        for i in range(0, self._ns):
+            Gn_w = xi * Gw_i[i].reshape((-1, self._s_dims[i]))
+            std_w_list.append(compute_std(Gn_w))
+
+        # std of xi
+        Gn_xi = Gw.reshape(-1)
+        std_xi = compute_std(Gn_xi)
+        # std of b
+        Gn_b = torch.ones_like(Gn_xi)
+        std_b = compute_std(Gn_b)
+        return its, sens_w_list, sens_xi, sens_b, std_w_list, std_xi, std_b
 
     def _unpack_result(self, opt_res):
         """ unpack result """
@@ -485,18 +519,25 @@ class SASGreensSystem:
         unscaled_xi = xi * self._xi_mag
         unscaled_b = b * self._b_mag
 
-        if self._return_intensity_sensitivity:
-            # compute intensity and sensitivity
-            its, sens_w_list, sens_xi, sens_b = \
-                self._intensity_sensitivity(w_list, unscaled_xi, unscaled_b)
+        if self._returns_intensity_sensitivity_uncertainty:
+            # compute intensity, sensitivity and uncertainty
+            its, sens_w_list, sens_xi, sens_b, std_w_list, std_xi, std_b = \
+                self._intensity_sensitivity_uncertainty(w_list, unscaled_xi,
+                                                        unscaled_b)
+            # list to dict
             sens_w_dict = {self._par_keys[i]: sens_w.to('cpu')
                            for i, sens_w in enumerate(sens_w_list)}
+            std_w_dict = {self._par_keys[i]: std_w.to('cpu')
+                          for i, std_w in enumerate(std_w_list)}
             return {'w_dict': w_dict,
                     'xi': unscaled_xi,
                     'b': unscaled_b,
                     'sens_w_dict': sens_w_dict,
                     'sens_xi': sens_xi.item(),
                     'sens_b': sens_b.item(),
+                    'std_w_dict': std_w_dict,
+                    'std_xi': std_xi.item(),
+                    'std_b': std_b.item(),
                     'I': its.to('cpu'),
                     'wct': opt_res['execution_time'],
                     'opt_res': opt_res}
@@ -658,7 +699,7 @@ class SASGreensSystem:
         self._x_save = None  # safety check
 
         # other options
-        self._return_intensity_sensitivity = True
+        self._returns_intensity_sensitivity_uncertainty = True
 
     def compute_intensity(self, w_dict, xi, b):
         """
@@ -676,7 +717,7 @@ class SASGreensSystem:
                       w_dict_init=None, xi_init=None, b_init=None,
                       auto_scaling=True, maxiter=1000, verbose=1,
                       trust_options=None, save_iter=None,
-                      return_intensity_sensitivity=True,
+                      returns_intensity_sensitivity_uncertainty=True,
                       only_test_jac_hess=False):
         """
         Solve the inverse problem with observed intensity
@@ -696,8 +737,9 @@ class SASGreensSystem:
             `scipy.optimize.minimize(method='trust-constr')` (default=None)
         :param save_iter: save results every `save_iter` iterations
             (default=None)
-        :param return_intensity_sensitivity: return intensity and sensitivity
-            predicted by the inverted weights, ξ and b (default=True)
+        :param returns_intensity_sensitivity_uncertainty: also returns the
+            intensity predicted by the inverted (w, ξ, b) and the sensitivity
+            and uncertainty of (w, ξ, b) (default=True)
         :param only_test_jac_hess: only test Jacobian and Hessian
             (default=False)
         :return: a dict including the following (key, value) pairs:
@@ -707,6 +749,9 @@ class SASGreensSystem:
             sens_w_dict: `dict` of normalized sensitivity of inverted weights
             sens_xi: normalized sensitivity of inverted ξ
             sens_b: normalized sensitivity of inverted b
+            std_w_dict: `dict` of standard deviation of inverted weights
+            std_xi: standard deviation of inverted ξ
+            std_b: standard deviation of inverted b
             I: fitted intensity
             wct: wall-clock time
             opt_res: result of `scipy.optimize.minimize(method='trust-constr')`
@@ -802,7 +847,8 @@ class SASGreensSystem:
                 return
 
             # other options
-            self._return_intensity_sensitivity = return_intensity_sensitivity
+            self._returns_intensity_sensitivity_uncertainty = \
+                returns_intensity_sensitivity_uncertainty
 
             with self._logger.subproc('Solving NLP-s by trust-region'):
                 with self._logger.subproc('Trust-region options'):
