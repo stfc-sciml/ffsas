@@ -525,7 +525,7 @@ arguments sent to [scipy.optimize.minimize(method='trust-constr')](https://docs.
 history of the parameter distributions; see [examples/Ellipsoid.ipynb](../examples/Ellipsoid.ipynb) for example.
 Examining the convergence history is a good practice for all optimization problems. 
 
-* `returns_intensity_sensitivity_uncertainty`: in addition to weights, also returns the intensity,
+* `returns_intensity_sensitivity_uncertainty`: in addition to the MLE, also returns the intensity,
 sensitivity and uncertainty at the MLE.
 
 
@@ -540,7 +540,8 @@ sensitivity and uncertainty at the MLE.
 * `inverse_result['sens_b']`: normalized sensitivity of ![eq](https://latex.codecogs.com/svg.image?\inline%20b);
 * `inverse_result['std_w_dict']`: standard deviation of ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7Bw%7D)'s;
 * `inverse_result['std_xi']`: standard deviation of ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cxi);
-* `inverse_result['std_b']`: standard deviation of ![eq](https://latex.codecogs.com/svg.image?\inline%20b);* `inverse_result['I']`: fitted intensity ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BI%7D);
+* `inverse_result['std_b']`: standard deviation of ![eq](https://latex.codecogs.com/svg.image?\inline%20b);
+* `inverse_result['I']`: fitted intensity ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BI%7D);
 * `inverse_result['wct']`: wall-clock time to solution;
 * `inverse_result['opt_res']`: a [scipy.optimize.OptimizeResult](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html#scipy.optimize.OptimizeResult) 
 object returned by [scipy.optimize.minimize(method='trust-constr')](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-trustconstr.html#optimize-minimize-trustconstr), 
