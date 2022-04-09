@@ -21,11 +21,11 @@
 
 
 This guide starts with a brief theoretical section to help users to understand
-the exact problems `ffsas` solves. It then elaborates on the few Python APIs of `ffsas`
+the exact problems `ffsas` solves. It then elaborates on the Python APIs of `ffsas`
 for forward modelling and inversion. We recommend the following steps for new
 users to learn `ffsas`:
 
-1. Read [1 Theory](#1-Theory) and understand the problems;
+1. Read [1 Theory](#1-Theory) and understand the forward and inverse problems;
 2. Learn `ffsas` by following the Jupyter Notebooks in folder [examples](../examples);
 3. Use section [2 Python APIs](#2-Python-APIs) and [3 FAQ](#3-FAQ) as a 
 reference for applications and extended developments.
@@ -53,8 +53,8 @@ The cylinder model has four parameters:
 The intensity observation, denoted $I$,
 is a 2D image as a function of the scattering vectors
 $(q_x, q_y)$, or $I=I(q_x,q_y)$. 
-See [documentation of SASView/SASModels](https://www.sasview.org/docs/user/models/ellipsoid.html)
-for more details.
+See [documentation of SASView/SASModels](https://www.sasview.org/docs/user/models/cylinder.html)
+for more details about this model.
 
 ## 1.1 Forward modelling
 
@@ -90,7 +90,7 @@ $$
 
 
 
-Let $q_x$, $q_y$, $l$, $r$, $\theta$ and $\phi$ be discretized respectively by the 1D vectors: 
+Let $q_x$, $q_y$, $l$, $r$, $\theta$ and $\phi$ be discretized respectively by these 1D vectors: 
 $\mathbf{q}_x\in \mathbb{R}^{N_{q_x}}$,
 $\mathbf{q}_y\in \mathbb{R}^{N_{q_y}}$,
 $\mathbf{l}\in \mathbb{R}^{N_{l}}$,
@@ -153,15 +153,15 @@ $$
 \quad\quad\quad\quad(6)
 $$
 
-Here $\chi^2$ is computed through eqs. (5), (4) and (3), with $G_{ijmnst}$, $\mu_{ij}$ and $\sigma_{ij}$ as knowns. 
+Here $\chi^2$ is computed through eqs. (5), (4) and (3), with $G_{ijmnst}$, $\mu_{ij}$ and $\sigma_{ij}$ known. 
 The minimizer of this constrained nonlinear programming (NLP) problem, as denoted 
 (${\hat{w}^l_m}$, ${\hat{w}^r_n}$, ${\hat{w}^\theta_s}$, ${\hat{w}^\phi_t}$, $\hat\xi$, $\hat b$), 
-is also known as the **maximum likelihood estimator**. Note that this NLP is difficult to solve because, 
+is also known as the **maximum likelihood estimator** (MLE). Note that this NLP is difficult to solve because, 
 first, it involves mixed equality and inequality constraints and, second, the number of inequality 
 constraints is as large as the number of weights; within `ffsas`, we solve another equivalent 
 problem with much lower complexity — the math is hidden from users and thus skipped in this guide.
 
-Once the maximum likelihood estimator is obtained, normalized sensitivity analysis can be performed by 
+Once the MLE is obtained, sensitivity analysis can be performed by 
 
 $$
 S_{I}=\left.\sum_{J} H_{I J}\dfrac{X_J}{J_{J}}\right|_{\ \mathbf{X}=\mathbf{\hat X}},
@@ -173,12 +173,18 @@ where the vector $\mathbf{X}$ contains all the variables
 (${{w}^l_m}$, ${{w}^r_n}$, ${{w}^\theta_s}$, ${{w}^\phi_t}$, $\xi$, $b$) in a 
 flattened manner, and $\mathbf{J}$ and $\mathbf{H}$ respectively denotes the 
 Jacobian and Hessian of $\chi^2$ with respect to $\mathbf{X}$, all evaluated at 
-the maximum likelihood estimator $\mathbf{\hat X}$. The normalized sensitivity 
+the MLE $\mathbf{\hat X}$. The normalized sensitivity 
 $\mathbf{S}$ indicates how sensitively $\chi^2$ responds to a small variation of 
 $\mathbf{X}$ in the neighborhood of $\mathbf{\hat X}$. 
 The inverse of $\mathbf{S}$ can thus be understood as the relative uncertainty of 
-$\mathbf{\hat X}$. As a non-sampling-based method, `ffsas` cannot deliver 
-absolute uncertainty (such as variance) of any parameter estimations.
+$\mathbf{\hat X}$. 
+
+
+The standard deviation or error bar of the variables at the MLE can also be determined
+analytically because, as shown in eq. (3), $I$ is a linear function of the weights of
+each parameter when the other parameters are fixed at the MLE. 
+The analytical expressions are omitted here.
+
 
 ## 1.3 Tasks of `ffsas`
 
@@ -187,9 +193,9 @@ Having established the general theory as above, we can summarize the tasks of `f
 1. **the Green's tensor**: compute $\mathbf{G}$ given a model and a parameter space;
 2. **forward modelling**: with $\mathbf{G}$ computed, compute the intensity 
 $\mathbf{I}$ given ($\mathbf{w}$'s, $\xi$, $b$) based on eq. (3);
-3. **inverse problem**: with $\mathbf{G}$ computed, solve ($\mathbf{\hat w}$'s, 
+3. **inverse problem**: with $\mathbf{G}$ computed, solve the MLE ($\mathbf{\hat w}$'s, 
 $\hat\xi$, $\hat b$) given the intensity observations **μ** and **σ** based on eq. (6); 
-performing sensitivity analysis at ($\mathbf{\hat w}$'s, $\hat\xi$, $\hat b$) based on eq. (7).
+performing sensitivity and uncertainty analyses at the MLE based on eq. (7).
 
 ---
 
@@ -252,7 +258,7 @@ G = Ellipsoid.compute_G_mini_batch(q_list, par_dict, const_dict,
 ```
 
 
-`SASModel.compute_G_mini_batch()` takes six arguments, as explained below:
+`SASModel.compute_G_mini_batch()` takes nine arguments, as explained below:
 
 * `q_list`: `list` of $q$-vectors. If the intensity observation is a series, 
 such as for the `Sphere` model, `q_list` will contain one $q$-vector as a 1D `torch.Tensor`; 
@@ -302,7 +308,7 @@ users to adopt **file-based mini-batch computation with GPU acceleration** to ov
 memory insufficiency and reduce computing time — common practice in deep learning. 
 The computing infrastructure is shown below:
 
-    ![workflow](https://i.ibb.co/7bHSnGK/workflow.png)
+    ![workflow](https://github.com/stfc-sciml/ffsas/blob/main/doc/dev/arch.png)
 
     - `G_file`: the storage for $\mathbf{G}$; if `G_file=None`, $\mathbf{G}$ will be 
     computed and stored in memory, returned as a `torch.Tensor`; otherwise, 
@@ -398,10 +404,6 @@ class Cylinder(SASModel):
     def compute_V(cls, par_dict):
         l, r = par_dict['l'], par_dict['r']
         return math.pi * l[:, None] * r[None, :] ** 2
-
-    @classmethod
-    def get_par_keys_V(cls):
-        return ['l', 'r']
 ```
 
 Note that there is no method called `compute_G_mini_batch()` in the above code. 
@@ -415,8 +417,8 @@ that are hidden from users. In short, users implement `compute_G()` but use
 
 
 The method `get_par_keys_G()` returns the names of the parameters used for computing 
-$\mathbf{G}$, ordered as they appear in the dimensions of $\mathbf{G}$. The rest two 
-methods, `compute_V()` and `get_par_keys_V()`, are for volume computation, usually trivial.
+$\mathbf{G}$, ordered as they appear in the dimensions of $\mathbf{G}$, and 
+`compute_V()` for volume computation, usually trivial.
 The volume tensor can be useful for pre- and post-processing, such as transforming 
 the scaling factor, see [3 FAQ](#3-FAQ).
 
@@ -467,7 +469,7 @@ parameter names so that it can report the inverse results in a more user-friendl
 fixed parameters passed by `fixed_par_weights` to 
 `SASModel.compute_G_mini_batch()` must be excluded from this list. 
 * `batch_size` and `device`: they have the same meanings as they were in 
-`SASModel.compute_G_mini_batch()` but not necessarily have the same values as used for 
+`SASModel.compute_G_mini_batch()` but not necessarily the same values as used for 
 `SASModel.compute_G_mini_batch()`; see the previous figure of computational infrastructure. 
 * `log_file` and `log_screen`: `ffsas` has a powerful logging system. 
 The argument `log_file` specifies a file to save the logs 
@@ -507,7 +509,8 @@ of an intensity observation:
 inverse_result = g_sys.solve_inverse(mu, sigma, nu_mu=.0, nu_sigma=1.,
                                      w_dict_init=None, xi_init=None, b_init=None,
                                      auto_scaling=True, maxiter=1000, verbose=1,
-                                     trust_options=None, save_iter=None)
+                                     trust_options=None, save_iter=None,
+                                     returns_intensity_sensitivity_uncertainty=True)
 ```
 
 The arguments are explained below:
@@ -550,6 +553,11 @@ arguments sent to [scipy.optimize.minimize(method='trust-constr')](https://docs.
 history of the parameter distributions; see [examples/Ellipsoid.ipynb](../examples/Ellipsoid.ipynb) for example.
 Examining the convergence history is a good practice for all optimization problems. 
 
+* `returns_intensity_sensitivity_uncertainty`: in addition to weights, also returns the intensity,
+sensitivity and uncertainty at the MLE.
+
+
+
 `SASGreensSystem.solve_inverse()` returns a `dict` containing the inverse results, including:
 
 * `inverse_result['w_dict']`: MLE of $\mathbf{w}$'s;
@@ -558,7 +566,9 @@ Examining the convergence history is a good practice for all optimization proble
 * `inverse_result['sens_w_dict']`: normalized sensitivity of $\mathbf{w}$'s;
 * `inverse_result['sens_xi']`: normalized sensitivity of $\xi$;
 * `inverse_result['sens_b']`: normalized sensitivity of $b$;
-* `inverse_result['I']`: fitted intensity $\mathbf{I}$;
+* `inverse_result['std_w_dict']`: standard deviation of $\mathbf{w}$'s;
+* `inverse_result['std_xi']`: standard deviation of $\xi$;
+* `inverse_result['std_b']`: standard deviation of $b$;* `inverse_result['I']`: fitted intensity $\mathbf{I}$;
 * `inverse_result['wct']`: wall-clock time to solution;
 * `inverse_result['opt_res']`: a [scipy.optimize.OptimizeResult](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html#scipy.optimize.OptimizeResult) 
 object returned by [scipy.optimize.minimize(method='trust-constr')](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-trustconstr.html#optimize-minimize-trustconstr), 

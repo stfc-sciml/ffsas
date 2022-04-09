@@ -21,11 +21,11 @@
 
 
 This guide starts with a brief theoretical section to help users to understand
-the exact problems `ffsas` solves. It then elaborates on the few Python APIs of `ffsas`
+the exact problems `ffsas` solves. It then elaborates on the Python APIs of `ffsas`
 for forward modelling and inversion. We recommend the following steps for new
 users to learn `ffsas`:
 
-1. Read [1 Theory](#1-Theory) and understand the problems;
+1. Read [1 Theory](#1-Theory) and understand the forward and inverse problems;
 2. Learn `ffsas` by following the Jupyter Notebooks in folder [examples](../examples);
 3. Use section [2 Python APIs](#2-Python-APIs) and [3 FAQ](#3-FAQ) as a 
 reference for applications and extended developments.
@@ -53,8 +53,8 @@ The cylinder model has four parameters:
 The intensity observation, denoted ![eq](https://latex.codecogs.com/svg.image?\inline%20I),
 is a 2D image as a function of the scattering vectors
 ![eq](https://latex.codecogs.com/svg.image?\inline%20%28q_x%2C%20q_y%29), or ![eq](https://latex.codecogs.com/svg.image?\inline%20I%3DI%28q_x%2Cq_y%29). 
-See [documentation of SASView/SASModels](https://www.sasview.org/docs/user/models/ellipsoid.html)
-for more details.
+See [documentation of SASView/SASModels](https://www.sasview.org/docs/user/models/cylinder.html)
+for more details about this model.
 
 ## 1.1 Forward modelling
 
@@ -84,7 +84,7 @@ The resulting intensity will be the integral of the Green's function over the fo
 
 
 
-Let ![eq](https://latex.codecogs.com/svg.image?\inline%20q_x), ![eq](https://latex.codecogs.com/svg.image?\inline%20q_y), ![eq](https://latex.codecogs.com/svg.image?\inline%20l), ![eq](https://latex.codecogs.com/svg.image?\inline%20r), ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Ctheta) and ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cphi) be discretized respectively by the 1D vectors: 
+Let ![eq](https://latex.codecogs.com/svg.image?\inline%20q_x), ![eq](https://latex.codecogs.com/svg.image?\inline%20q_y), ![eq](https://latex.codecogs.com/svg.image?\inline%20l), ![eq](https://latex.codecogs.com/svg.image?\inline%20r), ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Ctheta) and ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cphi) be discretized respectively by these 1D vectors: 
 ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7Bq%7D_x%5Cin%20%5Cmathbb%7BR%7D%5E%7BN_%7Bq_x%7D%7D),
 ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7Bq%7D_y%5Cin%20%5Cmathbb%7BR%7D%5E%7BN_%7Bq_y%7D%7D),
 ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7Bl%7D%5Cin%20%5Cmathbb%7BR%7D%5E%7BN_%7Bl%7D%7D),
@@ -131,15 +131,15 @@ that minimize ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cchi%5E2), 
 
 <p align="center"><img src="https://latex.codecogs.com/svg.image?%0A%5Cbegin%7Baligned%7D%0A%26%20%5Cunderset%7Bw%5El_m%2C%20w%5Er_n%2C%20w%5E%5Ctheta_s%2C%20w%5E%5Cphi_t%2C%20%5Cxi%2C%20b%7D%7B%5Cmathrm%7Bminimize%7D%7D%5Cchi%5E2%20%5C%5C%5B.5em%5D%0A%5Cmathrm%7Bsubject%5C%20to%7D%20%5Cquad%26%20%5Csum_m%20w%5El_m%3D1%2C%5C%20%5Csum_n%20w%5Er_n%3D1%2C%5C%20%5Csum_s%20w%5E%5Ctheta_s%3D1%2C%5C%20%5Csum_t%20w%5E%5Cphi_t%3D1%3B%5C%5C%5B.5em%5D%0A%26%20w%5El_m%20%5Cgeq%200%2C%5C%20w%5Er_n%20%5Cgeq%200%2C%5C%20w%5E%5Ctheta_s%5Cgeq0%2C%5C%20w%5E%5Cphi_t%5Cgeq0%2C%20%5Cquad%5Cforall%20m%2Cn%2Cs%2Ct.%0A%5Cend%7Baligned%7D%0A%5Cquad%5Cquad%5Cquad%5Cquad%286%29%0A"></p>
 
-Here ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cchi%5E2) is computed through eqs. (5), (4) and (3), with ![eq](https://latex.codecogs.com/svg.image?\inline%20G_%7Bijmnst%7D), ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmu_%7Bij%7D) and ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Csigma_%7Bij%7D) as knowns. 
+Here ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cchi%5E2) is computed through eqs. (5), (4) and (3), with ![eq](https://latex.codecogs.com/svg.image?\inline%20G_%7Bijmnst%7D), ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmu_%7Bij%7D) and ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Csigma_%7Bij%7D) known. 
 The minimizer of this constrained nonlinear programming (NLP) problem, as denoted 
 (![eq](https://latex.codecogs.com/svg.image?\inline%20%7B%5Chat%7Bw%7D%5El_m%7D), ![eq](https://latex.codecogs.com/svg.image?\inline%20%7B%5Chat%7Bw%7D%5Er_n%7D), ![eq](https://latex.codecogs.com/svg.image?\inline%20%7B%5Chat%7Bw%7D%5E%5Ctheta_s%7D), ![eq](https://latex.codecogs.com/svg.image?\inline%20%7B%5Chat%7Bw%7D%5E%5Cphi_t%7D), ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Chat%5Cxi), ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Chat%20b)), 
-is also known as the **maximum likelihood estimator**. Note that this NLP is difficult to solve because, 
+is also known as the **maximum likelihood estimator** (MLE). Note that this NLP is difficult to solve because, 
 first, it involves mixed equality and inequality constraints and, second, the number of inequality 
 constraints is as large as the number of weights; within `ffsas`, we solve another equivalent 
 problem with much lower complexity — the math is hidden from users and thus skipped in this guide.
 
-Once the maximum likelihood estimator is obtained, normalized sensitivity analysis can be performed by 
+Once the MLE is obtained, sensitivity analysis can be performed by 
 
 <p align="center"><img src="https://latex.codecogs.com/svg.image?%0AS_%7BI%7D%3D%5Cleft.%5Csum_%7BJ%7D%20H_%7BI%20J%7D%5Cdfrac%7BX_J%7D%7BJ_%7BJ%7D%7D%5Cright%7C_%7B%5C%20%5Cmathbf%7BX%7D%3D%5Cmathbf%7B%5Chat%20X%7D%7D%2C%0A%5Cquad%5Cquad%5Cquad%5Cquad%287%29%0A"></p>
 
@@ -148,12 +148,18 @@ where the vector ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%
 (![eq](https://latex.codecogs.com/svg.image?\inline%20%7B%7Bw%7D%5El_m%7D), ![eq](https://latex.codecogs.com/svg.image?\inline%20%7B%7Bw%7D%5Er_n%7D), ![eq](https://latex.codecogs.com/svg.image?\inline%20%7B%7Bw%7D%5E%5Ctheta_s%7D), ![eq](https://latex.codecogs.com/svg.image?\inline%20%7B%7Bw%7D%5E%5Cphi_t%7D), ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cxi), ![eq](https://latex.codecogs.com/svg.image?\inline%20b)) in a 
 flattened manner, and ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BJ%7D) and ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BH%7D) respectively denotes the 
 Jacobian and Hessian of ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cchi%5E2) with respect to ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BX%7D), all evaluated at 
-the maximum likelihood estimator ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7B%5Chat%20X%7D). The normalized sensitivity 
+the MLE ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7B%5Chat%20X%7D). The normalized sensitivity 
 ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BS%7D) indicates how sensitively ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cchi%5E2) responds to a small variation of 
 ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BX%7D) in the neighborhood of ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7B%5Chat%20X%7D). 
 The inverse of ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BS%7D) can thus be understood as the relative uncertainty of 
-![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7B%5Chat%20X%7D). As a non-sampling-based method, `ffsas` cannot deliver 
-absolute uncertainty (such as variance) of any parameter estimations.
+![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7B%5Chat%20X%7D). 
+
+
+The standard deviation or error bar of the variables at the MLE can also be determined
+analytically because, as shown in eq. (3), ![eq](https://latex.codecogs.com/svg.image?\inline%20I) is a linear function of the weights of
+each parameter when the other parameters are fixed at the MLE. 
+The analytical expressions are omitted here.
+
 
 ## 1.3 Tasks of `ffsas`
 
@@ -162,9 +168,9 @@ Having established the general theory as above, we can summarize the tasks of `f
 1. **the Green's tensor**: compute ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BG%7D) given a model and a parameter space;
 2. **forward modelling**: with ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BG%7D) computed, compute the intensity 
 ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BI%7D) given (![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7Bw%7D)'s, ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cxi), ![eq](https://latex.codecogs.com/svg.image?\inline%20b)) based on eq. (3);
-3. **inverse problem**: with ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BG%7D) computed, solve (![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7B%5Chat%20w%7D)'s, 
+3. **inverse problem**: with ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BG%7D) computed, solve the MLE (![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7B%5Chat%20w%7D)'s, 
 ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Chat%5Cxi), ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Chat%20b)) given the intensity observations **μ** and **σ** based on eq. (6); 
-performing sensitivity analysis at (![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7B%5Chat%20w%7D)'s, ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Chat%5Cxi), ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Chat%20b)) based on eq. (7).
+performing sensitivity and uncertainty analyses at the MLE based on eq. (7).
 
 ---
 
@@ -227,7 +233,7 @@ G = Ellipsoid.compute_G_mini_batch(q_list, par_dict, const_dict,
 ```
 
 
-`SASModel.compute_G_mini_batch()` takes six arguments, as explained below:
+`SASModel.compute_G_mini_batch()` takes nine arguments, as explained below:
 
 * `q_list`: `list` of ![eq](https://latex.codecogs.com/svg.image?\inline%20q)-vectors. If the intensity observation is a series, 
 such as for the `Sphere` model, `q_list` will contain one ![eq](https://latex.codecogs.com/svg.image?\inline%20q)-vector as a 1D `torch.Tensor`; 
@@ -277,7 +283,7 @@ users to adopt **file-based mini-batch computation with GPU acceleration** to ov
 memory insufficiency and reduce computing time — common practice in deep learning. 
 The computing infrastructure is shown below:
 
-    ![workflow](https://i.ibb.co/7bHSnGK/workflow.png)
+    ![workflow](https://github.com/stfc-sciml/ffsas/blob/main/doc/dev/arch.png)
 
     - `G_file`: the storage for ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BG%7D); if `G_file=None`, ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BG%7D) will be 
     computed and stored in memory, returned as a `torch.Tensor`; otherwise, 
@@ -373,10 +379,6 @@ class Cylinder(SASModel):
     def compute_V(cls, par_dict):
         l, r = par_dict['l'], par_dict['r']
         return math.pi * l[:, None] * r[None, :] ** 2
-
-    @classmethod
-    def get_par_keys_V(cls):
-        return ['l', 'r']
 ```
 
 Note that there is no method called `compute_G_mini_batch()` in the above code. 
@@ -390,8 +392,8 @@ that are hidden from users. In short, users implement `compute_G()` but use
 
 
 The method `get_par_keys_G()` returns the names of the parameters used for computing 
-![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BG%7D), ordered as they appear in the dimensions of ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BG%7D). The rest two 
-methods, `compute_V()` and `get_par_keys_V()`, are for volume computation, usually trivial.
+![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BG%7D), ordered as they appear in the dimensions of ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BG%7D), and 
+`compute_V()` for volume computation, usually trivial.
 The volume tensor can be useful for pre- and post-processing, such as transforming 
 the scaling factor, see [3 FAQ](#3-FAQ).
 
@@ -442,7 +444,7 @@ parameter names so that it can report the inverse results in a more user-friendl
 fixed parameters passed by `fixed_par_weights` to 
 `SASModel.compute_G_mini_batch()` must be excluded from this list. 
 * `batch_size` and `device`: they have the same meanings as they were in 
-`SASModel.compute_G_mini_batch()` but not necessarily have the same values as used for 
+`SASModel.compute_G_mini_batch()` but not necessarily the same values as used for 
 `SASModel.compute_G_mini_batch()`; see the previous figure of computational infrastructure. 
 * `log_file` and `log_screen`: `ffsas` has a powerful logging system. 
 The argument `log_file` specifies a file to save the logs 
@@ -482,7 +484,8 @@ of an intensity observation:
 inverse_result = g_sys.solve_inverse(mu, sigma, nu_mu=.0, nu_sigma=1.,
                                      w_dict_init=None, xi_init=None, b_init=None,
                                      auto_scaling=True, maxiter=1000, verbose=1,
-                                     trust_options=None, save_iter=None)
+                                     trust_options=None, save_iter=None,
+                                     returns_intensity_sensitivity_uncertainty=True)
 ```
 
 The arguments are explained below:
@@ -522,6 +525,11 @@ arguments sent to [scipy.optimize.minimize(method='trust-constr')](https://docs.
 history of the parameter distributions; see [examples/Ellipsoid.ipynb](../examples/Ellipsoid.ipynb) for example.
 Examining the convergence history is a good practice for all optimization problems. 
 
+* `returns_intensity_sensitivity_uncertainty`: in addition to weights, also returns the intensity,
+sensitivity and uncertainty at the MLE.
+
+
+
 `SASGreensSystem.solve_inverse()` returns a `dict` containing the inverse results, including:
 
 * `inverse_result['w_dict']`: MLE of ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7Bw%7D)'s;
@@ -530,7 +538,9 @@ Examining the convergence history is a good practice for all optimization proble
 * `inverse_result['sens_w_dict']`: normalized sensitivity of ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7Bw%7D)'s;
 * `inverse_result['sens_xi']`: normalized sensitivity of ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cxi);
 * `inverse_result['sens_b']`: normalized sensitivity of ![eq](https://latex.codecogs.com/svg.image?\inline%20b);
-* `inverse_result['I']`: fitted intensity ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BI%7D);
+* `inverse_result['std_w_dict']`: standard deviation of ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7Bw%7D)'s;
+* `inverse_result['std_xi']`: standard deviation of ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cxi);
+* `inverse_result['std_b']`: standard deviation of ![eq](https://latex.codecogs.com/svg.image?\inline%20b);* `inverse_result['I']`: fitted intensity ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathbf%7BI%7D);
 * `inverse_result['wct']`: wall-clock time to solution;
 * `inverse_result['opt_res']`: a [scipy.optimize.OptimizeResult](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html#scipy.optimize.OptimizeResult) 
 object returned by [scipy.optimize.minimize(method='trust-constr')](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-trustconstr.html#optimize-minimize-trustconstr), 

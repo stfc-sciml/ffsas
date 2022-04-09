@@ -5,14 +5,14 @@
 #
 
 `ffsas` is a Python library to invert for free-form distributions of model 
-parameters from polydisperse SAS experiment data. It yields the maximum likelihood 
-estimation of parameter distributions and the normalized sensitivity of 
-each parameter at the maximum likelihood estimator. 
+parameters in a polydisperse SAS system. It yields the maximum likelihood 
+estimator of the parameter distributions and the sensitivity and uncertainty 
+of the maximum likelihood estimator. 
 `ffsas` comes with the following features:
 
 
 * **Generality**: `ffsas` formulates the SAS inverse problem as a 
-Green's-tensor-based system, which covers *any* complex SAS models with 
+Green's-tensor-based multi-linear map, which covers *any* complex SAS models with 
 multiple parameters. An arbitrary model can be easily implemented by 
 supplying the Green's function for forward modelling, i.e., a function 
 that computes the monodisperse intensity on a structured grid of model parameters 
@@ -27,20 +27,19 @@ with a few equality constraints. It is solved by a trust-region method,
 implemented in SciPy as `scipy.optimize.minimize(method='trust-constr')`, 
 officially mentioned as "the most versatile constrained minimization algorithm 
 implemented in SciPy and the most appropriate for large-scale problems". 
-The computations of the Jacobian and Hessian are the most expensive steps 
-during solution, for which `ffsas` uses GPU acceleration and file-based
-mini-batch computation to significantly reduce runtime and memory requirement. 
-Such ideas are borrowed from deep learning and implemented with PyTorch. 
+Computation of the Jacobian and Hessian of the χ2 error, as the most expensive 
+step during solution, is accelerated by GPU and mini-batch computation. 
+The idea is borrowed from deep learning and implemented with PyTorch. 
 
 * **Accuracy**: the model parameters and the resulting intensity in a SAS problem 
 can span many orders of magnitude, and a good choice of unit system is essential 
 to avoid an ill-conditioned inverse problem. `ffsas` *automatically* analyzes 
-the scales of data and parameters and determines a proper internal unit system to 
-avoid accuracy loss from input to output. Such an internal unit system is hidden 
-from users, who can use any external unit system for input and output.
+the orders of magnitude of data and parameters so as to determine a proper internal 
+unit system to avoid accuracy loss. Such an internal unit system is hidden 
+from users, who can use an arbitrary unit system for input and output.
 
 * **Usability**: `ffsas` can be installed with `pip` in one line. Its usage only 
-includes four API functions, respectively for 
+includes four APIs respectively for 
     - computing the Green's tensor **G** given a model and a parameter space
     - define a **G**-system with this Green's tensor
     - using this **G**-system to compute intensity given parameter 
@@ -60,7 +59,7 @@ To install `ffsas`:
 pip install ffsas
 ```
 
-Follow the [User Guide](doc/USER-GUIDE.md) to learn the usage.
+Follow the [User Guide](https://github.com/stfc-sciml/ffsas/blob/main/doc/USER-GUIDE.md) to learn the usage.
 
 
 ## Credits
@@ -71,7 +70,7 @@ Jeyan Thiyagalingam<sup>1</sup>
 
 <sup>2</sup> ISIS Neutron and Muon Source, STFC, UK
 
-<sup>3</sup> Diamond Light Source, STFC, UK
+<sup>3</sup> Diamond Light Source, UK
 
 ## Funding and Support 
 This work was supported by the ISIS Neutron and Muon Source (ISIS) of the Science and Technology Facilities Council through the ISIS-ML funding, and by Wave I of the UKRI Strategic Priorities Fund under the EPSRC grant (EP/T001569/1), particularly the AI for Science theme in that grant and the Alan Turing Institute. We gratefully acknowledge their support.
