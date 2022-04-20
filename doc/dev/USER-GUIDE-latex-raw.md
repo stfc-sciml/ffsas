@@ -570,7 +570,7 @@ sensitivity and uncertainty at the MLE.
 * `inverse_result['I']`: fitted intensity $\mathbf{I}$;
 * `inverse_result['wct']`: wall-clock time to solution;
 * `inverse_result['opt_res']`: a [scipy.optimize.OptimizeResult](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html#scipy.optimize.OptimizeResult) 
-dict returned by [scipy.optimize.minimize(method='trust-constr')](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-trustconstr.html#optimize-minimize-trustconstr), 
+dictionary returned by [scipy.optimize.minimize(method='trust-constr')](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-trustconstr.html#optimize-minimize-trustconstr), 
 containing rich information about the solution (objective, Jacobian, Hessian, constraint violations, ...);
 * `inverse_result['saved_res']`: `list` of `dict`'s, each `dict` containing all 
 the above items at every `save_iter` iterations.
