@@ -540,13 +540,13 @@ class SASGreensSystem:
                     'std_b': std_b.item(),
                     'I': its.to('cpu'),
                     'wct': opt_res['execution_time'],
-                    'opt_res': opt_res}
+                    'opt_res': dict(opt_res)}
         else:
             return {'w_dict': w_dict,
                     'xi': unscaled_xi,
                     'b': unscaled_b,
                     'wct': opt_res['execution_time'],
-                    'opt_res': opt_res}
+                    'opt_res': dict(opt_res)}
 
     def _call_back_save(self, _, opt_res):
         """ callback to save results """
