@@ -215,7 +215,7 @@ The only purpose of this class is to compute the Green's tensor.
 Any concrete (usable) model, such as "cylinder", must be implemented as a 
 derived class of `SASModel`. Currently only three built-in models are provided, 
 `Sphere`, `Ellipsoid` and `Cylinder`, and the `Cylinder` model is also implemented in 
-[examples/cylinder_user_defined.ipynb](../examples/cylinder_user_defined.ipynb) as an 
+`examples/03_cylinder/cylinder.ipynb` as an 
 example of user-defined models. We do not intend to implement many models, but motivated 
 to provide easy interfaces for users to implement their own models.
 
@@ -226,8 +226,7 @@ then how to implement a user-defined model.
 
 Users only call one method to compute the Green's tensor $\mathbf{G}$: 
 `SASModel.compute_G_mini_batch()`. Below is a complete example
-using the build-in model `Ellipsoid`, extracted from 
-[examples/ellipsoid.ipynb](../examples/ellipsoid.ipynb):
+using the build-in model `Ellipsoid`:
 
 ```python
 # import torch and model
@@ -335,8 +334,7 @@ or the Green's function, whereas the hardware and algorithmic optimizations are
 handled internally by `ffsas`.
 
 Take the "cylinder" model for example. Below is the complete code to 
-implement a `Cylinder` class, 
-copied from [examples/cylinder_user_defined.ipynb](../examples/cylinder_user_defined.ipynb):
+implement a `Cylinder` class, borrowed from `examples/03_cylinder/cylinder.ipynb`:
 
 ```python
 # import base class
@@ -550,7 +548,7 @@ How it works is explained in the question about "unit system" in [3 FAQ](#3-FAQ)
 arguments sent to [scipy.optimize.minimize(method='trust-constr')](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-trustconstr.html#optimize-minimize-trustconstr).
 
 * `save_iter`: save the inverse results every `save_iter` iterations so that one can examine the convergence 
-history of the parameter distributions; see [examples/Ellipsoid.ipynb](../examples/Ellipsoid.ipynb) for example.
+history of the parameter distributions.
 Examining the convergence history is a good practice for all optimization problems. 
 
 * `returns_intensity_sensitivity_uncertainty`: in addition to the MLE, also returns the intensity,
@@ -664,8 +662,7 @@ and $\xi$ in `ffsas`?**
 * **Can I use `float32` to save CPU/GPU memory?**
     
     Yes. To be consistent with `scipy.optimize.minimize(method='trust-constr')`,
-    `ffsas` uses `float64` by default. To switch to `float32`, simply do
-    (see [examples/cylinder_user_defined.ipynb](../examples/cylinder_user_defined.ipynb) for example):
+    `ffsas` uses `float64` by default. To switch to `float32`, simply do:
     ```python
     import torch
     import ffsas
