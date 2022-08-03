@@ -62,15 +62,24 @@ pip install ffsas
 Follow the [User Guide](https://github.com/stfc-sciml/ffsas/blob/main/doc/USER-GUIDE.md) to learn the usage.
 
 
-## Credits
-Kuangdai Leng<sup>1</sup>, Steve King<sup>2</sup>, Tim Snow<sup>3</sup>, Sarah Rogers<sup>2</sup>, 
-Jeyan Thiyagalingam<sup>1</sup>
+## Citation
+* Full paper (open access): [http://doi.org/10.1107/S1600576722006379](http://doi.org/10.1107/S1600576722006379)
 
-<sup>1</sup> Scientific Computing Department, STFC, UK
-
-<sup>2</sup> ISIS Neutron and Muon Source, STFC, UK
-
-<sup>3</sup> Diamond Light Source, UK
+* BIBTex:
+    ```bib
+    @article{Leng:jl5041,
+    author = "Leng, Kuangdai and King, Stephen and Snow, Tim and Rogers, Sarah and Markvardsen, Anders and Maheswaran, Satheesh and Thiyagalingam, Jeyan",
+    title = "{Parameter inversion of a polydisperse system in small-angle scattering}",
+    journal = "Journal of Applied Crystallography",
+    year = "2022",
+    volume = "55",
+    number = "4",
+    pages = "966--977",
+    month = "Aug",
+    doi = {10.1107/S1600576722006379},
+    url = {https://doi.org/10.1107/S1600576722006379},
+    }
+    ```
 
 ## Funding and Support 
 This work was supported by the ISIS Neutron and Muon Source (ISIS) of the Science and Technology Facilities Council through the ISIS-ML funding, and by Wave I of the UKRI Strategic Priorities Fund under the EPSRC grant (EP/T001569/1), particularly the AI for Science theme in that grant and the Alan Turing Institute. We gratefully acknowledge their support.
