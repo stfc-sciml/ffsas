@@ -641,16 +641,21 @@ and $\xi$ in `ffsas`?**
 
 * **Is non-flat background supported in `ffsas`?**
     
-    Yes, but only 1D intensity curves are supported. 
+    Yes, but only supporting 1D intensity curves. 
     Once a `SASGreensSystem` object is defined, non-flat background can be activated
     for inversion by calling 
     ```python
     g_sys.activate_non_flat_background(q_vector, q_anchor, q_log_scale=True, b_log_scale=True)
     ```
-    Here `q_vector` is the 1D scattering vector and `q_anchor` defines the `q` values at
-    the anchor points in the non-flat `b(q)` profile. The `b` values at these anchor points
+    Here `q_vector` is the 1D scattering vector used to compute `G`, 
+    and `q_anchor` defines the `q` values at
+    some anchor points in the non-flat `b(q)` profile. 
+    The `b` values at these anchor points
     will be solved by `ffsas`. 
-    
+    Between the anchor points, linear interpolation is assumed.
+    Using too many anchor points can make `b(q)` too strong for data-fitting, so decreasing
+    the reliability of the inverted parameters. 
+    We suggest using up to 3 anchor points unless you know the background *is* very non-flat.
 
 * **I am more used to `numpy` than `torch`. How do I use `ffsas`?**
 
