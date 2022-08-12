@@ -13,6 +13,7 @@ import sys
 import h5py
 import torch
 from scipy import optimize
+from scipy.interpolate import interp1d
 
 from ffsas import torch_dtype
 from ffsas.utils import MultiLevelLogger, _form_batch_ids
@@ -41,7 +42,8 @@ class SASGreensSystem:
         """ get initial guess x0 """
         if w_dict_init is None:
             w_dict_init = {}
-        x0 = torch.empty(sum(self._s_dims) + 2, dtype=torch_dtype)
+        n_anchor = self._n_anchor_bq()
+        x0 = torch.empty(sum(self._s_dims) + 1 + n_anchor, dtype=torch_dtype)
         pos = 0
         for i, s_dim in enumerate(self._s_dims):
             if self._par_keys[i] not in w_dict_init.keys():
@@ -52,8 +54,8 @@ class SASGreensSystem:
                 w_init = w_dict_init[self._par_keys[i]]
                 x0[pos:pos + s_dim] = torch.sqrt(w_init / w_init.sum())
             pos += s_dim
-        x0[-2] = xi0
-        x0[-1] = b0
+        x0[-n_anchor - 1] = xi0
+        x0[-n_anchor:] = b0
         return x0.numpy()
 
     def _extract(self, x, device):
@@ -64,8 +66,9 @@ class SASGreensSystem:
             s = _to_tensor(x[pos:pos + s_dim], device=device)
             pos += s_dim
             s_list.append(s)
-        xi = x[-2]
-        b = x[-1]
+        n_anchor = self._n_anchor_bq()
+        xi = x[-n_anchor - 1]
+        b = _to_tensor(x[-n_anchor:], device=device)
         return s_list, xi, b
 
     def _g_dot_w(self, g, w_list, skips):
