@@ -625,7 +625,8 @@ and ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cxi) in `ffsas`?**
     piecewise linear function either in linear or log scale).
     Using too many anchor points can make `b(q)` too expressive for data-fitting, decreasing
     the reliability of the inverted parameters. 
-    We suggest using up to 3 anchor points unless you know the background is very wiggling.
+    We suggest using up to five anchor points (including the two for bounds)
+    unless you know the background is very wiggling.
 
 * **I am more used to `numpy` than `torch`. How do I use `ffsas`?**
 

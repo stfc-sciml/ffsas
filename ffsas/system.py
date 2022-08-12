@@ -837,7 +837,7 @@ class SASGreensSystem:
         """
         w_list = [w_dict[key].to(self._device) for key in self._par_keys]
         if not isinstance(b, torch.Tensor):
-            b = _to_tensor([b])
+            b = _to_tensor([b], device=self._device)
         return self._intensity(w_list, xi, b).to('cpu')
 
     def solve_inverse(self, mu, sigma, nu_mu=.0, nu_sigma=1.,
