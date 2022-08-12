@@ -256,7 +256,9 @@ class SASGreensSystem:
         H[-n_anchor:, -n_anchor:] += torch.tensordot(
             deps_db, deps_db, dims=q_id)
         # ε x d^2ε/db/db
-        deps_db_db = self._b_mag / nv_indexed * self._compute_d2_bq_d2_anchor(b)
+        nv_indexed2 = self._nv[self._q_slices + (None, None)]
+        deps_db_db = \
+            self._b_mag / nv_indexed2 * self._compute_d2_bq_d2_anchor(b)
         H[-n_anchor:, -n_anchor:] += torch.tensordot(
             eps, deps_db_db, dims=self._nq)
 
@@ -467,7 +469,8 @@ class SASGreensSystem:
         H[-n_anchor:, -n_anchor:] += \
             torch.tensordot(deps_db, deps_db, dims=q_id)
         # ε x d^2ε/db/db
-        deps_db_db = 1. / nv_indexed * self._compute_d2_bq_d2_anchor(b)
+        nv_indexed2 = self._nv[self._q_slices + (None, None)]
+        deps_db_db = 1. / nv_indexed2 * self._compute_d2_bq_d2_anchor(b)
         H[-n_anchor:, -n_anchor:] += torch.tensordot(
             eps, deps_db_db, dims=self._nq)
 
