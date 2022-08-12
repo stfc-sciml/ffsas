@@ -13,7 +13,6 @@ import sys
 import h5py
 import torch
 from scipy import optimize
-from scipy.interpolate import interp1d
 
 from ffsas import torch_dtype
 from ffsas.utils import MultiLevelLogger, _form_batch_ids
@@ -114,7 +113,7 @@ class SASGreensSystem:
             Gs2[G_id] = self._g_dot_s2(g, s_list, skips=[])
 
         # objective
-        eps = (xi_m * Gs2 + b_m - self._mu) / self._nv
+        eps = (xi_m * Gs2 + self._compute_bq(b_m) - self._mu) / self._nv
         L = .5 * torch.tensordot(eps, eps, dims=self._nq)
         return L.item()
 
@@ -173,12 +172,12 @@ class SASGreensSystem:
         Gs2 = torch.tensordot(Gs2_i[0], s_list[0] ** 2, dims=1)
 
         # eps
-        eps = (xi_m * Gs2 + b_m - self._mu) / self._nv
+        eps = (xi_m * Gs2 + self._compute_bq(b_m) - self._mu) / self._nv
         deps_dxi = self._xi_mag * Gs2 / self._nv
-        deps_db = self._b_mag / self._nv
+        nv_indexed = self._nv[self._q_slices + (None,)]
+        deps_db = self._b_mag / nv_indexed * self._compute_d_bq_d_anchor(b)
 
         # Jacobian
-        nv_indexed = self._nv[self._q_slices + (None,)]
         J = torch.empty(len(x), dtype=torch_dtype, device=self._device)
         pos = 0
         for i, s_dim in enumerate(self._s_dims):
@@ -186,8 +185,9 @@ class SASGreensSystem:
             dL_ds = torch.tensordot(eps, deps_ds, dims=self._nq)
             J[pos:pos + s_dim] = dL_ds
             pos += s_dim
-        J[-2] = torch.tensordot(eps, deps_dxi, dims=self._nq).item()
-        J[-1] = torch.tensordot(eps, deps_db, dims=self._nq).item()
+        n_anchor = self._n_anchor_bq()
+        J[-n_anchor - 1] = torch.tensordot(eps, deps_dxi, dims=self._nq).item()
+        J[-n_anchor:] = torch.tensordot(eps, deps_db, dims=self._nq)
         self._jac_save = J.to('cpu').numpy()
 
         # Hessian
@@ -234,11 +234,11 @@ class SASGreensSystem:
             H[slice_i, -2] += torch.tensordot(eps, deps_ds_i / xi,
                                               dims=self._nq)
             # dε/dxi x dε/ds
-            H[slice_i, -2] += torch.tensordot(
+            H[slice_i, -n_anchor - 1] += torch.tensordot(
                 deps_dxi, deps_ds_i, dims=self._nq)
             # dε/db x dε/ds
-            H[slice_i, -1] += torch.tensordot(
-                deps_db, deps_ds_i, dims=self._nq)
+            H[slice_i, -n_anchor:] += torch.tensordot(
+                deps_ds_i, deps_db, dims=q_id)
 
         ###################
         # Scalar terms:   #
@@ -247,11 +247,14 @@ class SASGreensSystem:
         # 3) d^2L/db/db   #
         ###################
         # dε/dxi x dε/dxi
-        H[-2, -2] += torch.tensordot(deps_dxi, deps_dxi, dims=self._nq)
+        H[-n_anchor - 1, -n_anchor - 1] += \
+            torch.tensordot(deps_dxi, deps_dxi, dims=self._nq)
         # dε/dxi x dε/db
-        H[-2, -1] += torch.tensordot(deps_dxi, deps_db, dims=self._nq)
+        H[-n_anchor - 1, -n_anchor:] += \
+            torch.tensordot(deps_dxi, deps_db, dims=self._nq)
         # dε/db x dε/db
-        H[-1, -1] += torch.tensordot(deps_db, deps_db, dims=self._nq)
+        H[-n_anchor:, -n_anchor:] += torch.tensordot(
+            deps_db, deps_db, dims=q_id)
 
         # copy upper to lower
         lower_ids = torch.tril_indices(len(x), len(x), offset=-1)
@@ -320,7 +323,7 @@ class SASGreensSystem:
             Gw[G_id] = self._g_dot_w(g, w_list, skips=[])
 
         # intensity
-        return xi * Gw + b
+        return xi * Gw + self._compute_bq(b)
 
     def _intensity_sensitivity_uncertainty(self, w_list, xi, b):
         """ compute intensity, sensitivity and uncertainty """
@@ -381,16 +384,17 @@ class SASGreensSystem:
         ##############
 
         # intensity
-        its = xi * Gw + b
+        its = xi * Gw + self._compute_bq(b)
 
         # eps
         eps = (its - self._mu) / self._nv
         deps_dxi = Gw / self._nv
-        deps_db = 1. / self._nv
+        nv_indexed = self._nv[self._q_slices + (None,)]
+        deps_db = 1. / nv_indexed * self._compute_d_bq_d_anchor(b)
 
         # Jacobian
-        len_x = sum(self._s_dims) + 2
-        nv_indexed = self._nv[self._q_slices + (None,)]
+        n_anchor = self._n_anchor_bq()
+        len_x = sum(self._s_dims) + n_anchor + 1
         J = torch.empty(len_x, dtype=torch_dtype, device=self._device)
         pos = 0
         for i, s_dim in enumerate(self._s_dims):
@@ -398,8 +402,8 @@ class SASGreensSystem:
             dL_dw = torch.tensordot(eps, deps_dw, dims=self._nq)
             J[pos:pos + s_dim] = dL_dw
             pos += s_dim
-        J[-2] = torch.tensordot(eps, deps_dxi, dims=self._nq).item()
-        J[-1] = torch.tensordot(eps, deps_db, dims=self._nq).item()
+        J[-n_anchor - 1] = torch.tensordot(eps, deps_dxi, dims=self._nq).item()
+        J[-n_anchor:] = torch.tensordot(eps, deps_db, dims=self._nq)
 
         # Hessian
         q_id = (list(range(self._nq)), list(range(self._nq)))
@@ -437,11 +441,11 @@ class SASGreensSystem:
             H[slice_i, -2] += torch.tensordot(eps, deps_dw_i / xi,
                                               dims=self._nq)
             # dε/dxi x dε/dw
-            H[slice_i, -2] += torch.tensordot(
+            H[slice_i, -n_anchor - 1] += torch.tensordot(
                 deps_dxi, deps_dw_i, dims=self._nq)
             # dε/db x dε/dw
-            H[slice_i, -1] += torch.tensordot(
-                deps_db, deps_dw_i, dims=self._nq)
+            H[slice_i, -n_anchor:] += torch.tensordot(
+                deps_dw_i, deps_db, dims=q_id)
 
         ###################
         # Scalar terms:   #
@@ -450,11 +454,14 @@ class SASGreensSystem:
         # 3) d^2L/db/db   #
         ###################
         # dε/dxi x dε/dxi
-        H[-2, -2] += torch.tensordot(deps_dxi, deps_dxi, dims=self._nq)
+        H[-n_anchor - 1, -n_anchor - 1] += \
+            torch.tensordot(deps_dxi, deps_dxi, dims=self._nq)
         # dε/dxi x dε/db
-        H[-2, -1] += torch.tensordot(deps_dxi, deps_db, dims=self._nq)
+        H[-n_anchor - 1, -n_anchor:] += \
+            torch.tensordot(deps_dxi, deps_db, dims=self._nq)
         # dε/db x dε/db
-        H[-1, -1] += torch.tensordot(deps_db, deps_db, dims=self._nq)
+        H[-n_anchor:, -n_anchor:] += \
+            torch.tensordot(deps_db, deps_db, dims=q_id)
 
         # copy upper to lower
         lower_ids = torch.tril_indices(len_x, len_x, offset=-1)
@@ -466,8 +473,8 @@ class SASGreensSystem:
         for i, s_dim in enumerate(self._s_dims):
             x[pos:pos + s_dim] = w_list[i]
             pos += s_dim
-        x[-2] = xi
-        x[-1] = b
+        x[-n_anchor - 1] = xi
+        x[-n_anchor:] = b
 
         ###############
         # sensitivity #
@@ -504,8 +511,10 @@ class SASGreensSystem:
         Gn_xi = Gw.reshape(-1)
         std_xi = compute_std(Gn_xi)
         # std of b
-        Gn_b = torch.ones_like(Gn_xi)
-        std_b = compute_std(Gn_b)
+        std_b = torch.empty_like(b)
+        Gn_b = self._compute_d_bq_d_anchor(b).reshape((-1, len(b)))
+        for i_b in range(len(std_b)):
+            std_b[i_b] = compute_std(Gn_b[:, i_b])
         return its, sens_w_list, sens_xi, sens_b, std_w_list, std_xi, std_b
 
     def _unpack_result(self, opt_res):
@@ -532,24 +541,33 @@ class SASGreensSystem:
                            for i, sens_w in enumerate(sens_w_list)}
             std_w_dict = {self._par_keys[i]: std_w.to('cpu')
                           for i, std_w in enumerate(std_w_list)}
-            return {'w_dict': w_dict,
-                    'xi': unscaled_xi,
-                    'b': unscaled_b,
-                    'sens_w_dict': sens_w_dict,
-                    'sens_xi': sens_xi.item(),
-                    'sens_b': sens_b.item(),
-                    'std_w_dict': std_w_dict,
-                    'std_xi': std_xi.item(),
-                    'std_b': std_b.item(),
-                    'I': its.to('cpu'),
-                    'wct': opt_res['execution_time'],
-                    'opt_res': dict(opt_res)}
+
+            # res dict
+            res_dict = {'w_dict': w_dict,
+                        'xi': unscaled_xi,
+                        'b': unscaled_b,
+                        'sens_w_dict': sens_w_dict,
+                        'sens_xi': sens_xi.item(),
+                        'sens_b': sens_b,
+                        'std_w_dict': std_w_dict,
+                        'std_xi': std_xi.item(),
+                        'std_b': std_b,
+                        'I': its.to('cpu'),
+                        'wct': opt_res['execution_time'],
+                        'opt_res': dict(opt_res)}
+            if not self._using_non_flat_background():
+                res_dict['b'] = res_dict['b'].item()
+                res_dict['sens_b'] = res_dict['sens_b'].item()
+                res_dict['std_b'] = res_dict['std_b'].item()
         else:
-            return {'w_dict': w_dict,
-                    'xi': unscaled_xi,
-                    'b': unscaled_b,
-                    'wct': opt_res['execution_time'],
-                    'opt_res': dict(opt_res)}
+            res_dict = {'w_dict': w_dict,
+                        'xi': unscaled_xi,
+                        'b': unscaled_b,
+                        'wct': opt_res['execution_time'],
+                        'opt_res': dict(opt_res)}
+            if not self._using_non_flat_background():
+                res_dict['b'] = res_dict['b'].item()
+        return res_dict
 
     def _call_back_save(self, _, opt_res):
         """ callback to save results """
@@ -600,6 +618,43 @@ class SASGreensSystem:
                     else:
                         print('1' if dH[i, j] > mH[i, j] * tol else '0', end='')
                 print()
+
+    def _using_non_flat_background(self):
+        """ whether using non-flat background """
+        return self._nfb_q_vector is not None
+
+    def _n_anchor_bq(self):
+        """ number of anchor points for non-flat background """
+        if self._using_non_flat_background():
+            return len(self._nfb_q_anchor)
+        else:
+            return 1
+
+    def _compute_bq(self, b_anchor):
+        """ compute b(q) """
+        if not self._using_non_flat_background():
+            return torch.full(self._q_dims, b_anchor.item(),
+                              device=b_anchor.device)
+
+        K = self._nfb_K.to(b_anchor.device)
+        if self._nfb_b_log_scale:
+            b_anchor = torch.clamp(b_anchor, min=1e-20)
+            return (b_anchor ** K).prod(dim=1)
+        else:
+            return torch.mv(K, b_anchor)
+
+    def _compute_d_bq_d_anchor(self, b_anchor):
+        """ compute derivative of b(q) w.r.t. anchor values """
+        if not self._using_non_flat_background():
+            return torch.ones(self._q_dims + [1], device=b_anchor.device)
+
+        K = self._nfb_K.to(b_anchor.device)
+        if self._nfb_b_log_scale:
+            b_anchor = torch.clamp(b_anchor, min=1e-20)
+            res = K * ((b_anchor ** K).prod(dim=1)[:, None] / b_anchor[None, :])
+            return res
+        else:
+            return K
 
     ##################
     # public methods #
@@ -704,6 +759,73 @@ class SASGreensSystem:
         # other options
         self._returns_intensity_sensitivity_uncertainty = True
 
+        # non-flat background, only supported for 1D I(q)
+        self._nfb_q_vector = None
+        self._nfb_q_anchor = None
+        self._nfb_b_log_scale = True
+        self._nfb_K = None
+
+    def activate_non_flat_background(self, q_vector, q_anchor,
+                                     q_log_scale=True, b_log_scale=True):
+        """
+        Activate non-flat background, only supported for 1D data
+
+        :param q_vector: 1D scattering vector `q`
+        :param q_anchor: anchor points in `b(q)`
+        :param q_log_scale: use log scale for `q` (default=True)
+        :param b_log_scale: use log scale for `b` (default=True)
+        """
+        self._nfb_q_vector = _to_tensor(q_vector)
+        self._nfb_q_anchor = _to_tensor(q_anchor)
+        self._nfb_b_log_scale = b_log_scale
+        assert self._nfb_q_vector.ndim == 1, 'q_vector must be 1D.'
+        assert self._nfb_q_anchor.ndim == 1, 'q_anchor must be 1D.'
+        assert len(self._nfb_q_anchor) >= 2, \
+            'q_anchor must contain at least two elements.'
+        # anchors must be sorted
+        assert torch.all(self._nfb_q_anchor[:-1] <
+                         self._nfb_q_anchor[1:]).item(), \
+            'q_anchor must be sorted in strict ascending order.'
+        # anchors must contain full q-range
+        assert self._nfb_q_anchor[0] <= self._nfb_q_vector.min()
+        assert self._nfb_q_anchor[-1] >= self._nfb_q_vector.max()
+        # change q to log
+        if q_log_scale:
+            self._nfb_q_vector = torch.log(self._nfb_q_vector)
+            self._nfb_q_anchor = torch.log(self._nfb_q_anchor)
+
+        #################################
+        # compute matrix K, bq = K * ba #
+        #################################
+        n_anchor = len(self._nfb_q_anchor)
+        self._nfb_K = torch.zeros((len(self._nfb_q_vector), n_anchor),
+                                  dtype=torch_dtype)
+
+        # (q - q0) / (q1 - q0) term
+        for i in range(1, n_anchor):
+            dev = (self._nfb_q_vector -
+                   self._nfb_q_anchor[i - 1]) / (
+                          self._nfb_q_anchor[i] -
+                          self._nfb_q_anchor[i - 1])
+            dev[dev < 0.] = 0.
+            dev[dev > 1.] = 0.
+            self._nfb_K[:, i] += dev
+
+        # (q1 - q) / (q1 - q0) term
+        for i in range(0, n_anchor - 1):
+            dev = (self._nfb_q_anchor[i + 1] -
+                   self._nfb_q_vector) / (
+                          self._nfb_q_anchor[i + 1] -
+                          self._nfb_q_anchor[i])
+            dev[dev < 0.] = 0.
+            dev[dev > 1.] = 0.
+            self._nfb_K[:, i] += dev
+
+        # repeated if q is located exactly at a middle anchor point
+        repeated = self._nfb_K > 1.99
+        self._nfb_K[repeated] /= 2.
+        assert self._nfb_K.max() <= 1.
+
     def compute_intensity(self, w_dict, xi, b):
         """
         Compute intensity
@@ -714,6 +836,8 @@ class SASGreensSystem:
         :return: intensity as a `torch.Tensor`
         """
         w_list = [w_dict[key].to(self._device) for key in self._par_keys]
+        if not isinstance(b, torch.Tensor):
+            b = _to_tensor([b])
         return self._intensity(w_list, xi, b).to('cpu')
 
     def solve_inverse(self, mu, sigma, nu_mu=.0, nu_sigma=1.,
