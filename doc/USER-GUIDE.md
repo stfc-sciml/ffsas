@@ -607,6 +607,18 @@ and ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cxi) in `ffsas`?**
     (as explained in the previous question), but with the intensity unit changed from 
     ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathrm%7Bcm%7D%5E%7B-1%7D) to ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cmathrm%7B%28100%5C%20m%29%7D%5E%7B-1%7D).
     
+
+* **Is non-flat background supported in `ffsas`?**
+    
+    Yes, but only 1D intensity curves are supported. 
+    Once a `SASGreensSystem` object is defined, non-flat background can be activated
+    for inversion by calling 
+    ```python
+    g_sys.activate_non_flat_background(q_vector, q_anchor, q_log_scale=True, b_log_scale=True)
+    ```
+    Here `q_vector` is the 1D scattering vector and `q_anchor` defines the `q` values at
+    the anchor points in the non-flat `b(q)` profile. The `b` values at these anchor points
+    will be solved by `ffsas`. 
     
 
 * **I am more used to `numpy` than `torch`. How do I use `ffsas`?**
