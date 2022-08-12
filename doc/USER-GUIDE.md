@@ -621,10 +621,11 @@ and ![eq](https://latex.codecogs.com/svg.image?\inline%20%5Cxi) in `ffsas`?**
     some anchor points in the non-flat `b(q)` profile. 
     The `b` values at these anchor points
     will be solved by `ffsas`. 
-    Between the anchor points, linear interpolation is assumed.
-    Using too many anchor points can make `b(q)` too strong for data-fitting, so decreasing
+    Linear interpolation is assumed between the anchor points (so `b(q)` is a 
+    piecewise linear function either in linear or log scale).
+    Using too many anchor points can make `b(q)` too expressive for data-fitting, decreasing
     the reliability of the inverted parameters. 
-    We suggest using up to 3 anchor points unless you know the background *is* very non-flat.
+    We suggest using up to 3 anchor points unless you know the background is very wiggling.
 
 * **I am more used to `numpy` than `torch`. How do I use `ffsas`?**
 
