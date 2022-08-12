@@ -255,6 +255,10 @@ class SASGreensSystem:
         # dε/db x dε/db
         H[-n_anchor:, -n_anchor:] += torch.tensordot(
             deps_db, deps_db, dims=q_id)
+        # ε x d^2ε/db/db
+        deps_db_db = self._b_mag / nv_indexed * self._compute_d2_bq_d2_anchor(b)
+        H[-n_anchor:, -n_anchor:] += torch.tensordot(
+            eps, deps_db_db, dims=self._nq)
 
         # copy upper to lower
         lower_ids = torch.tril_indices(len(x), len(x), offset=-1)
@@ -462,6 +466,10 @@ class SASGreensSystem:
         # dε/db x dε/db
         H[-n_anchor:, -n_anchor:] += \
             torch.tensordot(deps_db, deps_db, dims=q_id)
+        # ε x d^2ε/db/db
+        deps_db_db = 1. / nv_indexed * self._compute_d2_bq_d2_anchor(b)
+        H[-n_anchor:, -n_anchor:] += torch.tensordot(
+            eps, deps_db_db, dims=self._nq)
 
         # copy upper to lower
         lower_ids = torch.tril_indices(len_x, len_x, offset=-1)
@@ -633,7 +641,7 @@ class SASGreensSystem:
     def _compute_bq(self, b_anchor):
         """ compute b(q) """
         if not self._using_non_flat_background():
-            return torch.full(self._q_dims, b_anchor.item(),
+            return torch.full(self._q_dims, b_anchor.item(), dtype=torch_dtype,
                               device=b_anchor.device)
 
         K = self._nfb_K.to(b_anchor.device)
@@ -646,7 +654,8 @@ class SASGreensSystem:
     def _compute_d_bq_d_anchor(self, b_anchor):
         """ compute derivative of b(q) w.r.t. anchor values """
         if not self._using_non_flat_background():
-            return torch.ones(self._q_dims + [1], device=b_anchor.device)
+            return torch.ones(self._q_dims + [1], dtype=torch_dtype,
+                              device=b_anchor.device)
 
         K = self._nfb_K.to(b_anchor.device)
         if self._nfb_b_log_scale:
@@ -655,6 +664,27 @@ class SASGreensSystem:
             return res
         else:
             return K
+
+    def _compute_d2_bq_d2_anchor(self, b_anchor):
+        """ compute second derivative of b(q) w.r.t. anchor values """
+        if not self._using_non_flat_background():
+            return torch.zeros(self._q_dims + [1, 1], dtype=torch_dtype,
+                               device=b_anchor.device)
+
+        K = self._nfb_K.to(b_anchor.device)
+        if self._nfb_b_log_scale:
+            x = torch.clamp(b_anchor, min=1e-20)
+            v = (x ** K).prod(dim=1)
+            vxx = v[:, None, None] / x[None, :, None] / x[None, None, :]
+            H = K[:, :, None] * K[:, None, :] * vxx
+            # diagonal elements are different
+            diag_id = torch.stack([torch.eye(len(x)).bool()] * len(v))
+            H[diag_id] = (K[:, :, None] * (K[:, None, :] - 1.) * vxx)[diag_id]
+            return H
+        else:
+            n = self._n_anchor_bq()
+            return torch.zeros(self._q_dims + [n, n], dtype=torch_dtype,
+                               device=b_anchor.device)
 
     ##################
     # public methods #

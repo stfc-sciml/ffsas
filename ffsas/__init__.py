@@ -23,4 +23,4 @@ def set_torch_dtype(dtype):
 
 
 # specify version here; it will picked up by pip
-__version__ = '1.1.3'
+__version__ = '1.1.4'
