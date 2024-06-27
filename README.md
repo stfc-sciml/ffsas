@@ -1,4 +1,4 @@
-<img src="https://render.githubusercontent.com/render/math?math={\color{BurntOrange}\Huge\textbf{F}}\!{\color{RedOrange}\Huge\textbf{F}}{\color{BrickRed}\Huge\mathbf{S\!A\!S}}">   v1.1
+# FFSAS  v1.1
 
 **F**ree-**F**orm inversion for **S**mall-**A**ngle **S**cattering (SAS)
 
